@@ -1,0 +1,16 @@
+[
+  {"q": "97201", "expect": "zip:97201"},
+  {"q": "Portland, Oregon", "expect": "city:4159000"},
+  {"q": "portland or", "expect": "city:4159000"},
+  {"q": "St. Louis, MO", "expect": "city:2965000"},
+  {"q": "saint louis missouri", "expect": "city:2965000"},
+  {"q": "multnomah county", "expect": "county:41051"},
+  {"q": "multnomah", "expect": "county:41051"},
+  {"q": "Oregon", "expect": "state:OR"},
+  {"q": "oregan", "expect": "state:OR"},
+  {"q": "new mexico", "expect": "state:NM"},
+  {"q": "portlnd oregon", "expect": "city:4159000"},
+  {"q": "Los Angeles, CA", "expect": "city:0644000"},
+  {"q": "Cook County IL", "expect": "county:17031"},
+  {"q": "Harris County, Texas", "expect": "county:48201"}
+]

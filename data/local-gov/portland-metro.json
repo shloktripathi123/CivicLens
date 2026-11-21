@@ -1,0 +1,399 @@
+{
+ "asOf": "2026-10-12",
+ "sourceName": "Official unit websites (curated)",
+ "units": [
+  {
+   "id": "sd:4101920",
+   "kind": "school_district",
+   "name": "Beaverton School District 48J",
+   "state": "OR",
+   "fips": "4101920",
+   "placeIds": ["city:4105350"],
+   "function": "Public school district",
+   "form": "Seven-member Board of Directors",
+   "officialUrl": "https://www.beaverton.k12.or.us/school-board",
+   "offices": [
+    {
+     "id": "bsd-board",
+     "title": "School Board Director",
+     "role": "elected",
+     "selection": "Elected by zone, nonpartisan",
+     "seats": 7,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.beaverton.k12.or.us/school-board/board-members",
+     "holders": [
+      { "name": "Dr. Vân Truong", "seat": "Zone 1" },
+      { "name": "Dr. Karen Pérez", "seat": "Zone 2" },
+      { "name": "Dr. Melissa Potter", "seat": "Zone 3 (Vice Chair)" },
+      { "name": "Sunita Garg", "seat": "Zone 4" },
+      { "name": "Syed Qasim", "seat": "Zone 5" },
+      { "name": "Justice Rajee", "seat": "Zone 6 (Chair)" },
+      { "name": "Dr. Tammy Carpenter", "seat": "Zone 7" }
+     ]
+    }
+   ],
+   "meetings": []
+  },
+  {
+   "id": "county:41067:gov",
+   "kind": "county",
+   "name": "Washington County",
+   "state": "OR",
+   "fips": "41067",
+   "placeIds": ["county:41067"],
+   "function": "County government: the Board of County Commissioners is the governing body; other county offices are elected separately.",
+   "form": "Board of County Commissioners (Chair at large plus four district commissioners)",
+   "officialUrl": "https://www.washingtoncountyor.gov/bcc",
+   "offices": [
+    {
+     "id": "wash-chair",
+     "title": "County Chair (Commissioner At Large)",
+     "role": "elected",
+     "selection": "Elected countywide, nonpartisan ballot",
+     "termYears": 4,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [{ "name": "Kathryn Harrington", "seat": "At large · term expires December 2026 (up in the Nov 3, 2026 election)", "email": "chair@washingtoncountyor.gov" }]
+    },
+    {
+     "id": "wash-comm",
+     "title": "County Commissioner",
+     "role": "elected",
+     "selection": "Elected by district, nonpartisan ballot (find your district with the county's Commissioner Lookup)",
+     "termYears": 4,
+     "seats": 4,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [
+      { "name": "Nafisa Fai", "seat": "District 1 · term expires December 2028" },
+      { "name": "Pam Treece", "seat": "District 2 · term expires December 2026 (up in the Nov 3, 2026 election)" },
+      { "name": "Jason Snider", "seat": "District 3 · term expires December 2028" },
+      { "name": "Jerry Willey", "seat": "District 4 · term expires December 2026 (up in the Nov 3, 2026 election)" }
+     ]
+    },
+    {
+     "id": "wash-da",
+     "title": "District Attorney",
+     "role": "elected",
+     "selection": "Elected countywide",
+     "termYears": 4,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [{ "name": "Kevin Barton", "seat": "Term expires December 2026" }]
+    },
+    {
+     "id": "wash-sheriff",
+     "title": "County Sheriff",
+     "role": "elected",
+     "selection": "Elected countywide",
+     "termYears": 4,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [{ "name": "Caprice Massey", "seat": "Term expires December 2028" }]
+    },
+    {
+     "id": "wash-auditor",
+     "title": "County Auditor",
+     "role": "elected",
+     "selection": "Elected countywide",
+     "termYears": 4,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [{ "name": "Kristine Adams-Wannberg", "seat": "Term expires December 2026", "email": null }]
+    },
+    {
+     "id": "wash-jp",
+     "title": "Justice of the Peace",
+     "role": "elected",
+     "selection": "Elected countywide",
+     "termYears": 6,
+     "sourceUrl": "https://www.washingtoncountyor.gov/elections/county-officials",
+     "holders": [{ "name": "Daniel Cross", "seat": "Term expires December 2028" }]
+    }
+   ],
+   "meetings": [
+    {
+     "body": "Board of County Commissioners",
+     "schedule": "See the Board's agendas and minutes portal for the meeting calendar",
+     "location": "Charles D. Cameron Public Services Building, 155 N First Avenue, Hillsboro, OR 97124",
+     "attend": "Streamed by TVCTV and on YouTube",
+     "sourceUrl": "https://www.washingtoncountyor.gov/bcc"
+    }
+   ]
+  },
+  {
+   "id": "county:41051:gov",
+   "kind": "county",
+   "name": "Multnomah County",
+   "state": "OR",
+   "fips": "41051",
+   "placeIds": [
+    "county:41051"
+   ],
+   "function": "County government: the Board of County Commissioners is the governing body.",
+   "form": "Board of County Commissioners (Chair plus four district commissioners)",
+   "officialUrl": "https://www.multco.us/board",
+   "offices": [
+    {
+     "id": "mult-chair",
+     "title": "County Chair",
+     "role": "elected",
+     "selection": "Elected at large, nonpartisan ballot",
+     "termYears": 4,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.multco.us/board",
+     "holders": [
+      {
+       "name": "Jessica Vega Pederson"
+      }
+     ]
+    },
+    {
+     "id": "mult-comm",
+     "title": "County Commissioner",
+     "role": "elected",
+     "selection": "Elected by district, nonpartisan ballot",
+     "termYears": 4,
+     "seats": 4,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.multco.us/board",
+     "holders": [
+      {
+       "name": "Meghan Moyer",
+       "seat": "District 1"
+      },
+      {
+       "name": "Shannon Singleton",
+       "seat": "District 2"
+      },
+      {
+       "name": "Julia Brim-Edwards",
+       "seat": "District 3"
+      },
+      {
+       "name": "Vince Jones-Dixon",
+       "seat": "District 4"
+      }
+     ]
+    }
+   ],
+   "meetings": [
+    {
+     "body": "Board of County Commissioners",
+     "schedule": "Regular meetings Thursdays at 9:30 a.m.; board briefings Tuesdays at 10 a.m.",
+     "location": "501 SE Hawthorne Blvd, Portland, OR 97214",
+     "attend": "Livestream available",
+     "sourceUrl": "https://www.multco.us/board"
+    }
+   ]
+  },
+  {
+   "id": "city:4159000:gov",
+   "kind": "city",
+   "name": "City of Portland",
+   "state": "OR",
+   "fips": "4159000",
+   "placeIds": [
+    "city:4159000"
+   ],
+   "function": "City government with an elected mayor and City Council.",
+   "form": "Mayor and City Council (district-based)",
+   "officialUrl": "https://www.portland.gov/council",
+   "offices": [
+    {
+     "id": "pdx-mayor",
+     "title": "Mayor",
+     "role": "elected",
+     "selection": "Elected; began term January 2025 (elected November 2024)",
+     "sourceUrl": "https://www.portland.gov/mayor",
+     "holders": [
+      {
+       "name": "Keith Wilson",
+       "email": "Mayor@portlandoregon.gov"
+      }
+     ]
+    },
+    {
+     "id": "pdx-council",
+     "title": "City Councilor",
+     "role": "elected",
+     "selection": "Elected by district (four districts, three councilors each as listed)",
+     "seats": 12,
+     "sourceUrl": "https://www.portland.gov/council",
+     "holders": [
+      {
+       "name": "Candace Avalos",
+       "seat": "District 1"
+      },
+      {
+       "name": "Jamie Dunphy",
+       "seat": "District 1"
+      },
+      {
+       "name": "Loretta Smith",
+       "seat": "District 1"
+      },
+      {
+       "name": "Dan Ryan",
+       "seat": "District 2"
+      },
+      {
+       "name": "Elana Pirtle-Guiney",
+       "seat": "District 2"
+      },
+      {
+       "name": "Sameer Kanal",
+       "seat": "District 2"
+      },
+      {
+       "name": "Angelita Morillo",
+       "seat": "District 3"
+      },
+      {
+       "name": "Steve Novick",
+       "seat": "District 3"
+      },
+      {
+       "name": "Tiffany Koyama Lane",
+       "seat": "District 3"
+      },
+      {
+       "name": "Eric Zimmerman",
+       "seat": "District 4"
+      },
+      {
+       "name": "Mitch Green",
+       "seat": "District 4"
+      },
+      {
+       "name": "Olivia Clark",
+       "seat": "District 4"
+      }
+     ]
+    }
+   ],
+   "meetings": [
+    {
+     "body": "City Council",
+     "schedule": "9:30 a.m. on the first, second, fourth and fifth Wednesday and 6:00 p.m. on the third Wednesday of each month; extra meetings the following Thursday at 2:00 p.m.",
+     "sourceUrl": "https://www.portland.gov/council"
+    }
+   ]
+  },
+  {
+   "id": "special:metro-or",
+   "kind": "special_district",
+   "name": "Metro (Portland-area regional government)",
+   "state": "OR",
+   "placeIds": [
+    "county:41051"
+   ],
+   "function": "Regional government; the Metro Council is its governing body.",
+   "form": "Metro Council (president plus six district councilors)",
+   "officialUrl": "https://www.oregonmetro.gov/regional-leadership/metro-council",
+   "offices": [
+    {
+     "id": "metro-pres",
+     "title": "Council President",
+     "role": "elected",
+     "selection": "Elected regionwide, nonpartisan race",
+     "termYears": 4,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.oregonmetro.gov/regional-leadership/metro-council",
+     "holders": [
+      {
+       "name": "Juan Carlos González"
+      }
+     ]
+    },
+    {
+     "id": "metro-councilor",
+     "title": "Metro Councilor",
+     "role": "elected",
+     "selection": "Elected by district, nonpartisan race",
+     "termYears": 4,
+     "seats": 6,
+     "nonpartisan": true,
+     "sourceUrl": "https://www.oregonmetro.gov/regional-leadership/metro-council",
+     "holders": [
+      {
+       "name": "Ashton Simpson",
+       "seat": "District 1"
+      },
+      {
+       "name": "Duncan Hwang",
+       "seat": "District 6"
+      }
+     ]
+    }
+   ],
+   "meetings": [
+    {
+     "body": "Metro Council",
+     "schedule": "Thursday meetings (in person and Zoom); Tuesday informational work sessions (Zoom)",
+     "location": "Metro Regional Center",
+     "sourceUrl": "https://www.oregonmetro.gov/regional-leadership/metro-council"
+    }
+   ]
+  },
+  {
+   "id": "special:trimet",
+   "kind": "special_district",
+   "name": "TriMet (Tri-County Metropolitan Transportation District)",
+   "state": "OR",
+   "placeIds": [
+    "county:41051"
+   ],
+   "function": "Transit district; a board sets its policy.",
+   "form": "Seven-member board appointed by the Governor",
+   "officialUrl": "https://trimet.org/about/board.htm",
+   "offices": [
+    {
+     "id": "trimet-board",
+     "title": "Board Director",
+     "role": "appointed",
+     "selection": "Appointed by the Governor; members live in the district they represent",
+     "appointing": "Governor of Oregon",
+     "termYears": 4,
+     "termLimit": "Two terms; serve at the governor’s pleasure",
+     "seats": 7,
+     "sourceUrl": "https://trimet.org/about/board.htm",
+     "holders": []
+    }
+   ],
+   "meetings": []
+  },
+  {
+   "id": "special:port-of-portland",
+   "kind": "special_district",
+   "name": "Port of Portland",
+   "state": "OR",
+   "placeIds": [
+    "county:41051",
+    "city:4159000"
+   ],
+   "function": "Port district governed by a Commission.",
+   "form": "Nine-member Commission appointed by the Governor",
+   "officialUrl": "https://www.portofportland.com/Commission",
+   "offices": [
+    {
+     "id": "port-commission",
+     "title": "Port Commissioner",
+     "role": "appointed",
+     "selection": "Appointed by the Governor and ratified by the Oregon Senate",
+     "appointing": "Governor of Oregon",
+     "termYears": 4,
+     "seats": 9,
+     "sourceUrl": "https://www.portofportland.com/Commission",
+     "holders": []
+    }
+   ],
+   "meetings": [
+    {
+     "body": "Port Commission",
+     "schedule": "Second Wednesday of every month at 9:30 a.m.",
+     "attend": "In person or on Teams",
+     "publicComment": "Written testimony to testimony@portofportland.com; to testify live, email by 12 p.m. the day before",
+     "sourceUrl": "https://www.portofportland.com/Commission"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "civic-lens",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "ingest": "npm run start -w @civic/ingest",
+    "dev:api": "npm run dev -w @civic/api",
+    "dev:web": "npm run dev -w @civic/web",
+    "build:search-assets": "node --import tsx scripts/build-search-assets.ts",
+    "build:page-assets": "node --import tsx scripts/build-page-assets.ts",
+    "import:d1": "node scripts/import-d1.mjs",
+    "deploy:api": "npm run build:search-assets && npm run build:page-assets && npx wrangler deploy --config apps/api/wrangler.jsonc",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test \"packages/**/*.test.ts\" \"tests/**/*.test.ts\" \"apps/api/**/*.test.ts\" \"apps/ingest/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "civic-lens-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "civic-lens-db",
+      "database_id": "61ef7a91-4447-4475-b395-e17cc2d2e040"
+    }
+  ],
+  "assets": {
+    "directory": "./static",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

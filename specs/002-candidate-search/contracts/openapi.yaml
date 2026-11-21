@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Civic Lens API - Candidate additions
+  version: 0.2.0
+paths:
+  /v1/candidates/{id}:
+    get:
+      summary: Candidate profile
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Profile with overview, background, agenda, record, finance, coverage
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CandidateProfile'}
+        '404': {description: Not found}
+  /v1/races:
+    get:
+      summary: List races
+      parameters:
+        - {name: state, in: query, schema: {type: string}}
+        - {name: office, in: query, schema: {type: string}}
+        - {name: year, in: query, schema: {type: integer}}
+      responses:
+        '200':
+          description: Races
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Race'}}
+  /v1/races/{id}:
+    get:
+      summary: Race with candidates in neutral (alphabetical) order
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Race
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Race'}
+  /v1/races/{id}/compare:
+    get:
+      summary: Side-by-side agenda by topic
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Comparison grid}
+  /v1/ballot:
+    get:
+      summary: Races for a ZIP (resolved server-side, not logged with identifiers)
+      parameters:
+        - {name: zip, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Races on the ballot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Race'}}
+components:
+  schemas:
+    Provenance:
+      type: object
+      required: [source, as_of]
+      properties:
+        source: {type: string}
+        url: {type: string}
+        as_of: {type: string, format: date}
+    Race:
+      type: object
+      properties:
+        id: {type: string}
+        office: {type: string}
+        jurisdiction: {type: string}
+        election_date: {type: string, format: date}
+        ordering: {type: string, example: alphabetical-by-last-name}
+        candidates:
+          type: array
+          items: {$ref: '#/components/schemas/CandidateSummary'}
+    CandidateSummary:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+        party: {type: string}
+        status: {type: string, enum: [filed, qualified, withdrawn, won, lost]}
+        incumbent: {type: boolean}
+    CandidateProfile:
+      type: object
+      properties:
+        summary: {$ref: '#/components/schemas/CandidateSummary'}
+        race: {$ref: '#/components/schemas/Race'}
+        background:
+          type: object
+          properties:
+            education: {type: array, items: {type: object}}
+            career: {type: array, items: {type: object}}
+        agenda:
+          type: object
+          description: Self-reported positions; kept separate from record
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  topic: {type: string}
+                  text: {type: string}
+                  source_url: {type: string}
+                  captured_at: {type: string, format: date}
+        record:
+          type: object
+          description: Public record from 001 (bills, votes); empty if never in office
+        finance: {type: object}
+        coverage:
+          type: object
+          additionalProperties: {type: string, enum: [available, partial, unavailable]}
+        provenance:
+          type: array
+          items: {$ref: '#/components/schemas/Provenance'}

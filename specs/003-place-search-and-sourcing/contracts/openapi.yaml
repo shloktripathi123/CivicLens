@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: Civic Lens API - Place search and sourcing additions
+  version: 0.3.0
+paths:
+  /v1/places/suggest:
+    get:
+      summary: Place suggestions while typing (p95 < 300 ms)
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Up to 8 places, each labeled with type and state
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/PlaceSummary'}
+  /v1/places/search:
+    get:
+      summary: Search places by state, county, city or ZIP
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}}
+        - {name: type, in: query, schema: {type: string, enum: [state, county, city, zip]}}
+        - {name: state, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: All matches (ambiguous names are never collapsed)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: {type: array, items: {$ref: '#/components/schemas/PlaceSummary'}}
+                  total: {type: integer}
+  /v1/places/{id}:
+    get:
+      summary: Place page
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Place with levels of government
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PlacePage'}
+        '404': {description: Not found}
+  /v1/zip/{zip}:
+    get:
+      summary: Place page for a ZIP code (approximate)
+      parameters:
+        - {name: zip, in: path, required: true, schema: {type: string, pattern: '^[0-9]{5}$'}}
+      responses:
+        '200':
+          description: Place page with approximate flag and overlaps
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PlacePage'}
+        '404': {description: Not found}
+  /v1/sources:
+    get:
+      summary: All sources with grade and rationale
+      responses:
+        '200':
+          description: Sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Source'}
+  /v1/sources/{id}:
+    get:
+      summary: Source detail (data for the credibility popup)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Source
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Source'}
+  /v1/rubric:
+    get:
+      summary: Current credibility rubric
+      responses:
+        '200':
+          description: Rubric
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Rubric'}
+  /v1/reports:
+    post:
+      summary: Report a wrong fact, a wrong rating, or an item that belongs to an excluded category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, target, note]
+              properties:
+                kind: {type: string, enum: [fact, rating, excluded_item]}
+                target: {type: string}
+                note: {type: string, maxLength: 2000}
+      responses:
+        '202': {description: Accepted; excluded items are hidden pending review}
+components:
+  schemas:
+    PlaceSummary:
+      type: object
+      properties:
+        id: {type: string}
+        type: {type: string, enum: [state, county, city, zip]}
+        name: {type: string}
+        state: {type: string}
+        approximate: {type: boolean}
+    Level:
+      type: object
+      properties:
+        level: {type: string, enum: [federal, state, county, city]}
+        state: {$ref: '#/components/schemas/SectionState'}
+        officials: {type: array, items: {type: object}}
+        candidates: {type: array, items: {type: object}}
+        races: {type: array, items: {type: object}}
+        gap:
+          type: object
+          description: Present when state is not_found or not_yet_checked
+          properties:
+            reason: {type: string}
+            sourcesChecked: {type: array, items: {type: string}}
+            officialSiteUrl: {type: string}
+    PlacePage:
+      type: object
+      properties:
+        place: {$ref: '#/components/schemas/PlaceSummary'}
+        approximateNote: {type: string}
+        parents: {type: array, items: {$ref: '#/components/schemas/PlaceSummary'}}
+        children: {type: array, items: {$ref: '#/components/schemas/PlaceSummary'}}
+        overlaps:
+          type: array
+          items:
+            type: object
+            properties:
+              place: {$ref: '#/components/schemas/PlaceSummary'}
+              share: {type: number}
+        levels: {type: array, items: {$ref: '#/components/schemas/Level'}}
+        completeness:
+          type: object
+          properties:
+            sectionsWithData: {type: integer}
+            sectionsTotal: {type: integer}
+            rule: {type: string}
+    SectionState:
+      type: string
+      enum: [sourced, sourced_low, not_found, not_yet_checked]
+    Citation:
+      type: object
+      required: [sourceName, url, retrievedAt, grade]
+      properties:
+        sourceId: {type: string}
+        sourceName: {type: string}
+        url: {type: string}
+        retrievedAt: {type: string, format: date}
+        grade: {type: string, enum: [high, medium, lower]}
+        selfReported: {type: boolean}
+        archiveUrl: {type: string, nullable: true}
+        stale: {type: boolean}
+    Criterion:
+      type: object
+      properties:
+        name: {type: string}
+        result: {type: string, enum: [pass, partial, fail]}
+        note: {type: string}
+    Source:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+        url: {type: string}
+        type: {type: string, enum: [government_record, campaign_material, major_news, advocacy_org, reference_wiki, other]}
+        grade: {type: string, enum: [high, medium, lower]}
+        rationale: {type: string}
+        rubricVersion: {type: string}
+        criteria: {type: array, items: {$ref: '#/components/schemas/Criterion'}}
+        factsDependingOnIt: {type: integer}
+    Rubric:
+      type: object
+      properties:
+        version: {type: string}
+        criteria: {type: array, items: {type: object}}
+        gradeRules: {type: array, items: {type: string}}
+    Section:
+      type: object
+      description: Added to every profile; every defined section appears exactly once
+      properties:
+        section: {type: string}
+        state: {$ref: '#/components/schemas/SectionState'}
+        citations: {type: array, items: {$ref: '#/components/schemas/Citation'}}
+        conflict: {type: boolean}
+        sourcesChecked: {type: array, items: {type: string}}
+        checkedAt: {type: string, format: date}

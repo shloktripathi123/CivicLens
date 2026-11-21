@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: CivicTrail API additions (004)
+  version: 0.1.0
+  description: Extends the Civic Lens API. Every fact object carries `provenance` (sourceId, grade, url, asOf). Existing routes are unchanged.
+paths:
+  /v1/representatives:
+    post:
+      summary: Officials for an address (not stored, not logged)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [address], properties: { address: { type: string } } }
+      responses:
+        "200": { description: "Districts and officials by level; gaps listed per level", content: { application/json: { schema: { $ref: "#/components/schemas/Representatives" } } } }
+        "404": { description: No match from the official geocoder }
+  /v1/places/{id}/representatives:
+    get:
+      summary: Officials for a ZIP, city, county or state; reports splitCertainty for ZIPs
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Representatives" } } } } }
+  /v1/bodies:
+    get: { summary: "Bodies, filter by level or place", responses: { "200": { description: ok } } }
+  /v1/bodies/{id}:
+    get: { summary: "Body with seats, members, responsibilities, selection method, citations", responses: { "200": { description: ok } } }
+  /v1/elections:
+    get:
+      summary: Upcoming elections for a place
+      parameters: [{ name: place, in: query, schema: { type: string } }]
+      responses: { "200": { description: ok } }
+  /v1/elections/{id}:
+    get: { summary: "Races, candidates (alphabetical), deadlines (verified only as dates), voting resources", responses: { "200": { description: ok } } }
+  /v1/bills:
+    get:
+      summary: Search bills
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: jurisdiction, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/BillStatus" } }
+      responses: { "200": { description: ok } }
+  /v1/bills/{id}:
+    get: { summary: "Bill, history, sponsors, votes, official text link, verified AI summary if any", responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Bill" } } } } } }
+  /v1/people/{id}/bills:
+    get: { summary: "Bills sponsored, each with status", responses: { "200": { description: ok } } }
+  /v1/people/{id}/votes:
+    get: { summary: Roll-call votes cast, responses: { "200": { description: ok } } }
+  /v1/meetings:
+    get: { summary: Public meetings by body or place, responses: { "200": { description: ok } } }
+  /v1/guides:
+    get: { summary: "Guides list (title, reading grade, last reviewed)", responses: { "200": { description: ok } } }
+  /v1/guides/{slug}:
+    get: { summary: "Guide with citations; place-specific block when ?place= is given", responses: { "200": { description: ok } } }
+  /v1/glossary:
+    get: { summary: Glossary terms, responses: { "200": { description: ok } } }
+components:
+  schemas:
+    BillStatus:
+      type: string
+      enum: [introduced, in_committee, passed_one_chamber, passed_both, enacted, vetoed, failed, withdrawn]
+    Provenance:
+      type: object
+      required: [sourceId, sourceName, sourceUrl, asOf, grade]
+      properties:
+        sourceId: { type: string }
+        sourceName: { type: string }
+        sourceUrl: { type: string }
+        asOf: { type: string }
+        grade: { type: string, enum: [A, B, C, D] }
+        selfReported: { type: boolean }
+    AiSummary:
+      type: object
+      description: Present only when verification passed. Always rendered in a labeled box separate from official data.
+      required: [text, model, generatedAt, sourceTextUrl, label]
+      properties:
+        text: { type: string }
+        model: { type: string }
+        generatedAt: { type: string }
+        sourceTextUrl: { type: string }
+        label: { type: string, enum: ["AI-generated summary"] }
+    Bill:
+      type: object
+      required: [id, title, status, isLaw, textUrl, provenance]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { $ref: "#/components/schemas/BillStatus" }
+        isLaw: { type: boolean }
+        textUrl: { type: string }
+        officialSummary: { type: string, nullable: true }
+        aiSummary: { $ref: "#/components/schemas/AiSummary", nullable: true }
+        provenance: { $ref: "#/components/schemas/Provenance" }
+    Representatives:
+      type: object
+      properties:
+        levels:
+          type: array
+          items:
+            type: object
+            properties:
+              level: { type: string, enum: [federal, state, county, city, school, special] }
+              state: { type: string, enum: [sourced, sourced_low, not_found, not_yet_checked] }
+              officials: { type: array, items: { type: object } }
+              gap:
+                type: object
+                nullable: true
+                properties: { reason: { type: string }, officialUrl: { type: string } }
+        splitCertainty: { type: string, enum: [exact, possibly_split, unknown] }
