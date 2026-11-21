@@ -26,7 +26,7 @@ export default async function RubricPage() {
       </table>
       <h2>Grades</h2>
       <ul>{Object.entries(r.grades).map(([g, m]) => <li key={g}><strong>{g}</strong>: {m}</li>)}</ul>
-      <p><a href="/sources/census-geography">See graded sources</a> · <a href="/coverage">Coverage</a></p>
+      <p><a href="/coverage">Coverage and available sources</a></p>
     </article>
   );
 }

@@ -25,7 +25,7 @@ export class SearchIndex {
     if (f.level && m.level !== f.level) return false;
     if (f.status && m.status !== f.status) return false;
     if (f.state && !m.states.split(",").includes(f.state.toUpperCase())) return false;
-    if (f.body && !m.bodies.toLowerCase().includes(f.body.toLowerCase())) return false;
+    if (f.body && !m.bodies.toLowerCase().includes(f.body.toLowerCase()) && !m.officeSought.includes(f.body.toLowerCase())) return false;
     if (f.party && !m.parties.toLowerCase().includes(f.party.toLowerCase())) return false;
     if (f.officeType && !m.officeTypes.split(",").includes(f.officeType)) return false;
     if (f.role === "candidate" && !m.candidate) return false;

@@ -341,7 +341,11 @@ export function allPersonMeta(db: DB): PersonMeta[] {
   const rows = db
     .prepare(
       `SELECT p.id, p.status, COALESCE(p.family, p.canonical_name) AS family,
-              (SELECT level FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS level,
+              COALESCE(
+                (SELECT level FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1),
+                (SELECT o.level FROM candidacy c JOIN race ra ON ra.id=c.race_id JOIN office o ON o.id=ra.office_id
+                 JOIN election e ON e.id=ra.election_id WHERE c.person_id=p.id ORDER BY e.date DESC LIMIT 1)
+              ) AS level,
               (SELECT body FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS body,
               (SELECT state FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS state,
               (SELECT party FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS party,

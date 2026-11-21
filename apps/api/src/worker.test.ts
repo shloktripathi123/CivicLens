@@ -65,13 +65,14 @@ const governmentUnit = {
 };
 const personTimeline = [{ title: "Senator", body: "U.S. Senate" }];
 
-function mockEnv() {
+function mockEnv(hidden: string[] = []) {
   const db = {
     prepare(sql: string) {
       let params: Array<string | number | null> = [];
       return {
         bind(...values: Array<string | number | null>) { params = values; return this; },
         async all<T>() {
+          if (sql.includes("FROM correction_report")) return { results: hidden.map((target) => ({ target })) as T[], success: true };
           if (sql.includes("FROM bill b")) return { results: [bill] as T[], success: true };
           if (sql.includes("FROM place WHERE id=?") && params[0] === "state:MA") {
             return { results: [{ ...city, id: "state:MA", type: "state", name: "Massachusetts", label: "Massachusetts",
@@ -93,7 +94,10 @@ function mockEnv() {
           }
           return null;
         },
-        async run() { return { success: true, meta: { last_row_id: 1 } }; },
+        async run() {
+          if (sql.includes("INSERT INTO correction_report") && params[1] === "excluded-category") hidden.push(String(params[0]));
+          return { success: true, meta: { last_row_id: 1 } };
+        },
       };
     },
   };
@@ -151,12 +155,34 @@ function mockEnv() {
         return new Response("{}", { status: 404 });
       },
     },
-  } as never;
+  };
 }
 
 async function get(path: string) {
   return worker.fetch(new Request(`https://civic-lens-api.test${path}`), mockEnv());
 }
+
+test("Cloudflare reports hide the reported item in detail and list responses", async () => {
+  const env = mockEnv();
+  const report = await worker.fetch(new Request("https://civic-lens-api.test/v1/reports", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ target: `https://civic-lens.test/races/${encodeURIComponent(race.id)}`, kind: "excluded-category", note: "Please review" }),
+  }), env);
+  assert.equal(report.status, 201);
+  assert.equal((await report.json() as { hidden: boolean }).hidden, true);
+  assert.equal((await worker.fetch(new Request(`https://civic-lens-api.test/v1/races/${encodeURIComponent(race.id)}`), env)).status, 451);
+  const list = await worker.fetch(new Request("https://civic-lens-api.test/v1/races"), env);
+  assert.deepEqual((await list.json() as { items: unknown[] }).items, []);
+});
+
+test("Cloudflare fails closed when pending reports cannot be checked", async () => {
+  const env = mockEnv();
+  env.DB.prepare = () => { throw new Error("D1 unavailable"); };
+  const response = await worker.fetch(new Request("https://civic-lens-api.test/v1/races"), env);
+  assert.equal(response.status, 503);
+  assert.match((await response.json() as { error: string }).error, /corrections/);
+});
 
 test("Cloudflare API serves bill list and detail pages from shared static data", async () => {
   const list = await get("/v1/bills?jurisdiction=OR&limit=1");

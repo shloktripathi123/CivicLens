@@ -3,7 +3,7 @@ import { KIND_TITLE, type LocalGov } from "@/lib/api";
 export default async function LocalGovernment({ placeId, apiUrl }: { placeId: string; apiUrl: string }) {
   const res = await fetch(`${apiUrl}/v1/places/${encodeURIComponent(placeId)}/local`, { cache: "no-store" }).catch(() => null);
   const g: LocalGov | null = res && res.ok ? await res.json() : null;
-  if (!g) return null;
+  if (!g) return <section className="block"><h2>Local government</h2><p className="empty" role="alert">Local government data is temporarily unavailable.</p></section>;
   return (
     <section className="block" aria-labelledby="local-h">
       <h2 id="local-h">Local government</h2>

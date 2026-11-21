@@ -15,6 +15,7 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
   const [total, setTotal] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [placeError, setPlaceError] = useState(false);
   const [loading, setLoading] = useState(false);
   const seq = useRef(0);
 
@@ -44,10 +45,11 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
       if (mine !== seq.current) return;
       if (placeReq) {
         const pr = await placeReq;
-        const pd = pr && pr.ok ? await pr.json() : { results: [], total: 0 };
+        const pd = pr && pr.ok ? await pr.json() : null;
         if (mine !== seq.current) return;
-        setPlaces(pd.results);
-        setPlaceTotal(pd.total);
+        setPlaceError(!pd);
+        setPlaces(pd?.results ?? []);
+        setPlaceTotal(pd?.total ?? 0);
       }
       setResults((prev) => (more && prev ? [...prev, ...data.results] : data.results));
       setTotal(data.total);
@@ -65,7 +67,7 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
   }
 
   useEffect(() => {
-    if (!q.trim()) { seq.current++; setResults(null); setPlaces([]); setPlaceTotal(0); setLoading(false); return; }
+    if (!q.trim()) { seq.current++; setResults(null); setPlaces([]); setPlaceTotal(0); setError(null); setPlaceError(false); setLoading(false); return; }
     const t = setTimeout(() => run(), 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,17 +83,15 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
           <label>Level
             <select value={level} onChange={(e) => setLevel(e.target.value)}>
               <option value="">All</option><option value="federal">Federal</option>
-              <option value="state" disabled>State (coming soon)</option>
-              <option value="county" disabled>County (coming soon)</option>
-              <option value="local" disabled>Local (coming soon)</option>
+              <option value="state">State</option>
             </select></label>
           <label>Body
             <select value={body} onChange={(e) => setBody(e.target.value)}>
-              <option value="">Any</option><option value="Senate">U.S. Senate</option><option value="House">U.S. House</option>
+              <option value="">Any</option><option value="Senate">Senate</option><option value="House">House</option>
             </select></label>
           <label>Status
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">Current and former</option><option value="current">Current</option><option value="former">Former</option><option value="candidate">Candidate (not in office)</option>
+              <option value="">All</option><option value="current">Current</option><option value="former">Former</option><option value="candidate">Candidate (not in office)</option>
             </select></label>
           {peopleOnly && (
             <label>Office type
@@ -111,6 +111,7 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
         {loading ? "Searching…" : error ? "" : results ? `${total} result${total === 1 ? "" : "s"}` : ""}
       </div>
       {error && <p className="empty" role="alert">{error}</p>}
+      {placeError && !error && <p className="empty" role="alert">Place search is temporarily unavailable. People results may still be shown.</p>}
       {places.length > 0 && (
         <section aria-labelledby="places-h">
           <h2 id="places-h">Places</h2>
@@ -129,7 +130,7 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
           {placeTotal > places.length && <p className="meta">{placeTotal - places.length} more places match. Add a state to narrow, for example “{q.trim()}, OR”.</p>}
         </section>
       )}
-      {results && results.length === 0 && places.length === 0 && !error && (
+      {results && results.length === 0 && places.length === 0 && !error && !placeError && (
         <p className="empty">Nothing matches “{q}”. Check the spelling, try just a last name or a state, or remove filters.</p>
       )}
       {results && results.length > 0 && <h2>People and candidates</h2>}
@@ -138,7 +139,7 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
           <li key={p.id}>
             <a className="card" href={p.candidacy && p.status === "candidate" ? `/candidates/${p.id}` : `/people/${p.id}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="avatar" src={p.photoUrl ?? ""} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+              {p.photoUrl ? <img className="avatar" src={p.photoUrl} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} /> : <span className="avatar" />}
               <span>
                 <span className="name">{p.name}</span>
                 {p.status !== "candidate" && <span className="chip">{p.status === "current" ? "Current" : "Former"}</span>}

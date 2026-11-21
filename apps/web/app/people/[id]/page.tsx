@@ -5,7 +5,7 @@ import DeepRecord from "@/components/DeepRecord";
 import { API_URL, describe, type Profile, type Provenance } from "@/lib/api";
 
 async function load(id: string): Promise<Profile | null> {
-  const res = await fetch(`${API_URL}/v1/people/${id}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/people/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
@@ -42,7 +42,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     <article>
       <div className="profile-head">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={person.photoUrl ?? ""} alt={`Official portrait of ${person.name}`} />
+        {person.photoUrl && <img src={person.photoUrl} alt={`Official portrait of ${person.name}`} />}
         <div>
           <h1>{person.name} <span className="chip">{person.status === "current" ? "Current" : "Former"}</span></h1>
           <p className="lead">{describe(person)} · {person.years}</p>
@@ -60,7 +60,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             <li key={k} className={v}>{SECTION_LABELS[k] ?? k}: {v}</li>
           ))}
         </ul>
-        <p className="src">Bills, votes, funding and ratings are not yet available and are being added.</p>
+        <p className="src">Coverage varies by person and source. See the full record below for available details.</p>
       </section>
 
       <section className="block" aria-labelledby="terms">

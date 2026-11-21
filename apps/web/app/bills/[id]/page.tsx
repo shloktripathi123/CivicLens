@@ -4,7 +4,7 @@ import Cite from "@/components/Cite";
 import { API_URL, type BillDetail } from "@/lib/api";
 
 async function load(id: string): Promise<BillDetail | null> {
-  const res = await fetch(`${API_URL}/v1/bills/${encodeURIComponent(id)}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/bills/${encodeURIComponent(id)}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();

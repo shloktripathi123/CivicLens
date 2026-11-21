@@ -11,9 +11,12 @@ interface Source {
 export default async function SourcePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await fetch(`${API_URL}/v1/sources/${encodeURIComponent(decodeURIComponent(id))}`, { cache: "no-store" });
-  if (!res.ok) notFound();
+  if (res.status === 404) notFound();
+  if (!res.ok) throw new Error(`API ${res.status}`);
   const s = (await res.json()) as Source;
-  const all = (await fetch(`${API_URL}/v1/sources`, { cache: "no-store" }).then((x) => x.json())) as { items: Source[] };
+  const allRes = await fetch(`${API_URL}/v1/sources`, { cache: "no-store" });
+  if (!allRes.ok) throw new Error(`API ${allRes.status}`);
+  const all = (await allRes.json()) as { items: Source[] };
   return (
     <article>
       <h1>{s.name}</h1>

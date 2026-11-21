@@ -1,0 +1,110 @@
+name: CI and deployment
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:ci
+      - name: Build web application
+        run: npm run build -w @civic/web
+        env:
+          NEXT_PUBLIC_API_URL: https://example.com
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload browser failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    concurrency:
+      group: civic-lens-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Verify snapshot provenance and deployment configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT_RUN_ID: ${{ vars.CIVIC_DB_RUN_ID }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if ! [[ "$SNAPSHOT_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::Set CIVIC_DB_RUN_ID to a successful Publish data snapshot run ID."
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Configure the Cloudflare deployment secrets."
+            exit 1
+          fi
+          node -e 'const u = new URL(process.env.NEXT_PUBLIC_API_URL); if (u.protocol !== "https:" || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw Error("NEXT_PUBLIC_API_URL must be an HTTPS origin");'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SNAPSHOT_RUN_ID" > "$RUNNER_TEMP/snapshot-run.json"
+          node -e 'const r = require(process.argv[1]); if (r.path !== ".github/workflows/data-snapshot.yml" || r.event !== "workflow_dispatch" || r.head_branch !== "main" || r.status !== "completed" || r.conclusion !== "success") throw Error("Snapshot run is not a successful, manually dispatched main-branch data snapshot");' "$RUNNER_TEMP/snapshot-run.json"
+      - uses: actions/download-artifact@v4
+        with:
+          name: civic-lens-db
+          path: data
+          run-id: ${{ vars.CIVIC_DB_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Validate downloaded snapshot
+        run: |
+          cd data
+          sha256sum --check civic.db.sha256
+          cd ..
+          node --import tsx scripts/validate-deployment-db.ts data/civic.db
+      - name: Reject obsolete deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::This commit is no longer the head of main; refusing to deploy stale code."
+            exit 1
+          fi
+      - name: Deploy API
+        run: npm run deploy:api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy web
+        run: npm run deploy -w @civic/web
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

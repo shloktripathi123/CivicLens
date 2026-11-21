@@ -10,7 +10,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   if (sp.status && sp.status in BILL_STATUS_LABEL) qs.set("status", sp.status);
   const offset = Math.max(0, Number(sp.offset) || 0);
   qs.set("offset", String(offset));
-  const res = await fetch(`${API_URL}/v1/bills?${qs}`, { next: { revalidate: 3600 } }).catch(() => null);
+  const res = await fetch(`${API_URL}/v1/bills?${qs}`, { cache: "no-store" }).catch(() => null);
   const { total, items } = res?.ok
     ? await res.json() as { total: number; items: Bill[] }
     : { total: 0, items: [] as Bill[] };
@@ -18,7 +18,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   return (
     <article>
       <h1>Bills</h1>
-      <p className="lead">Oregon Legislature, 2025 and 2026 regular sessions. A bill is only a law once it is shown as “Enacted into law”.</p>
+      <p className="lead">Oregon Legislature bills in our data. A bill is only a law once it is shown as “Enacted into law”.</p>
       {!res?.ok && <p className="empty" role="alert">Bills are temporarily unavailable. Please try again shortly.</p>}
       <form method="get" role="search" className="searchform">
         <label>Search bills <input name="q" defaultValue={sp.q ?? ""} /></label>

@@ -4,7 +4,7 @@ import Cite from "@/components/Cite";
 import { API_URL, STATUS_LABEL, describe, usd, type CandidateProfile, type Provenance } from "@/lib/api";
 
 async function load(id: string): Promise<CandidateProfile | null> {
-  const res = await fetch(`${API_URL}/v1/candidates/${id}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/candidates/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();

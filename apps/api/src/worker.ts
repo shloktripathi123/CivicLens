@@ -2,6 +2,7 @@ import {
   BILL_STATUSES, CRITERIA, GRADE_MEANING, RUBRIC_VERSION,
   nicknameVariants, parsePlaceQuery, scoreName, stateByFips, stateByUsps, tokens,
 } from "@civic/domain";
+import { reportTarget, sanitize } from "./exclusions.ts";
 
 function fuzzyPatterns(token: string): string[] {
   const patterns = new Set([token, ...nicknameVariants(token)]);
@@ -268,7 +269,7 @@ function summary(row: SearchRow) {
 
 const SEARCH_SELECT = `
   SELECT p.id, pn.name_norm AS nameNorm, p.status,
-    COALESCE(t.level, 'federal') AS level, COALESCE(t.body, '') AS body, t.state, t.party,
+    COALESCE(t.level, o.level, 'federal') AS level, COALESCE(t.body, '') AS body, t.state, t.party,
     CAST(COALESCE((SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id), '9999') AS INTEGER) AS startYear,
     CAST((SELECT MAX(substr(COALESCE(end_date,'9999'),1,4)) FROM office_term WHERE person_id=p.id) AS INTEGER) AS endYear,
     COALESCE((SELECT group_concat(DISTINCT body) FROM office_term WHERE person_id=p.id), '') AS bodies,
@@ -1167,7 +1168,7 @@ function exclusionsPage(): Response {
   });
 }
 
-export default {
+const router = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") {
@@ -1254,13 +1255,16 @@ export default {
       }
       if (request.method === "POST" && url.pathname === "/v1/reports") {
         const body = await request.json().catch(() => null) as { target?: unknown; kind?: unknown; note?: unknown } | null;
-        if (!body || typeof body.target !== "string" || body.target.length > 200 ||
+        if (!body || typeof body.target !== "string" || !body.target.trim() || body.target.length > 200 ||
           typeof body.note !== "string" || !body.note || body.note.length > 2000 ||
           typeof body.kind !== "string" || !["excluded-category", "factual-error", "rating"].includes(body.kind)) {
           return json({ error: "target, kind (excluded-category, factual-error, rating) and note are required" }, 400);
         }
+        const target = reportTarget(body.target);
+        if (body.kind === "excluded-category" && !target) return json({ error: "Provide an item ID or a supported page address." }, 400);
         const result = await env.DB.prepare(`INSERT INTO correction_report (target,kind,note,created_at)
-          VALUES (?,?,?,?)`).bind(body.target, body.kind, body.note, new Date().toISOString()).run();
+          VALUES (?,?,?,?)`).bind(target ?? body.target, body.kind, body.note, new Date().toISOString()).run();
+        if (!result.success) throw new Error("Could not save report");
         return json({ id: result.meta.last_row_id, status: "pending", hidden: body.kind === "excluded-category" }, 201);
       }
       const timelineMatch = url.pathname.match(/^\/v1\/people\/([0-9a-f-]{36})\/timeline$/);
@@ -1282,6 +1286,30 @@ export default {
         }, 503);
       }
       return json({ error: "Search is temporarily unavailable. Please try again in a moment." }, 503);
+    }
+  },
+};
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "GET" || !new URL(request.url).pathname.startsWith("/v1/")) {
+      return router.fetch(request, env);
+    }
+    try {
+      const reports = await env.DB.prepare(
+        "SELECT target FROM correction_report WHERE status = 'pending' AND kind = 'excluded-category'",
+      ).all<{ target: string }>();
+      if (!reports.success) throw new Error("Could not load pending correction reports");
+      const hidden = new Set(reports.results.map((r) => reportTarget(r.target)).filter((id): id is string => id !== null));
+      const path = new URL(request.url).pathname;
+      const id = path === "/v1/places/search" || path === "/v1/places/suggest" ? null : reportTarget(path);
+      if (id && hidden.has(id)) return json({ error: "This item is hidden while a report is reviewed." }, 451);
+      const response = await router.fetch(request, env);
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return response;
+      return json(sanitize(await response.json(), hidden), response.status);
+    } catch (error) {
+      console.error("Could not enforce pending corrections", error);
+      return json({ error: "Data is temporarily unavailable while corrections are checked." }, 503);
     }
   },
 };

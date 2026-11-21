@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { API_URL, STATUS_LABEL, type Race } from "@/lib/api";
 
 async function load(id: string): Promise<Race | null> {
-  const res = await fetch(`${API_URL}/v1/races/${encodeURIComponent(id)}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/races/${encodeURIComponent(id)}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
@@ -25,7 +25,7 @@ export default async function RacePage({ params }: { params: Promise<{ id: strin
           <li key={c.id}>
             <a className="card" href={`/candidates/${c.id}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="avatar" src={c.photoUrl ?? ""} alt="" loading="lazy" />
+              {c.photoUrl ? <img className="avatar" src={c.photoUrl} alt="" loading="lazy" /> : <span className="avatar" />}
               <span>
                 <span className="name">{c.name}</span>
                 <span className="chip">{c.party ?? "Party not available"}</span>

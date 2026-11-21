@@ -1,6 +1,3 @@
-import type { DB } from "@civic/db";
-import { hiddenTargets } from "@civic/db";
-
 // FR-025: categories that are never displayed, even when a source supplies them.
 export const EXCLUSIONS = [
   { category: "home-address", description: "Home addresses of officials and candidates", reason: "Safety: only official offices and campaign contact details are shown.", keys: ["homeAddress", "residence", "residentialAddress"] },
@@ -26,7 +23,10 @@ export function sanitize<T>(value: T, hidden: Set<string>): T {
   const walk = (v: unknown): unknown => {
     if (Array.isArray(v)) {
       return v
-        .filter((x) => !(x && typeof x === "object" && typeof (x as { id?: unknown }).id === "string" && hidden.has((x as { id: string }).id)))
+        .filter((x) => !(x && typeof x === "object" && ["id", "raceId", "personId", "candidacyId"].some((key) => {
+          const id = (x as Record<string, unknown>)[key];
+          return typeof id === "string" && hidden.has(id);
+        })))
         .filter((x) => !(x && typeof x === "object" && "allegation" in x && !isLegalRecord(x)))
         .map(walk);
     }
@@ -43,4 +43,15 @@ export function sanitize<T>(value: T, hidden: Set<string>): T {
   return walk(value) as T;
 }
 
-export function hiddenSet(db: DB) { return hiddenTargets(db); }
+export function reportTarget(target: string): string | null {
+  const trimmed = target.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith("/") && !/^https?:\/\//i.test(trimmed)) return trimmed;
+  try {
+    const path = new URL(trimmed, "https://civic-lens.invalid").pathname;
+    const match = path.match(/^\/(?:v1\/)?(?:people|candidates|races|bills|places|government|sources)\/([^/]+)(?:\/(?:timeline|local))?\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}

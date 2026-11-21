@@ -7,12 +7,21 @@ export default function ReportForm({ target = "" }: { target?: string }) {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const res = await fetch(`${API_URL}/v1/reports`, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target: f.get("target"), kind: f.get("kind"), note: f.get("note") }),
-    });
-    const j = await res.json();
-    setMsg(res.ok ? `Thank you. Report ${j.id} received${j.hidden ? "; the item is hidden until reviewed" : ""}.` : "Please fill in every field.");
+    setMsg("");
+    try {
+      const res = await fetch(`${API_URL}/v1/reports`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ target: f.get("target"), kind: f.get("kind"), note: f.get("note") }),
+      });
+      if (!res.ok) {
+        setMsg(res.status === 400 ? "Please check every field." : "Report submission is unavailable. Please try again.");
+        return;
+      }
+      const j = await res.json();
+      setMsg(`Thank you. Report ${j.id} received${j.hidden ? "; the item is hidden until reviewed" : ""}.`);
+    } catch {
+      setMsg("Report submission is unavailable. Please try again.");
+    }
   }
   return (
     <form onSubmit={submit}>

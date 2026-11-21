@@ -6,8 +6,8 @@ export default async function RacesPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const q = new URLSearchParams();
   for (const k of ["state", "office", "year"] as const) if (sp[k]) q.set(k, sp[k]!);
-  const res = await fetch(`${API_URL}/v1/races?${q}`, { cache: "no-store" });
-  const items: Race[] = res.ok ? (await res.json()).items : [];
+  const res = await fetch(`${API_URL}/v1/races?${q}`, { cache: "no-store" }).catch(() => null);
+  const items: Race[] = res?.ok ? (await res.json()).items : [];
   return (
     <article>
       <h1>Races</h1>
@@ -17,8 +17,8 @@ export default async function RacesPage({ searchParams }: { searchParams: Promis
         <label>Year<input name="year" defaultValue={sp.year} inputMode="numeric" /></label>
         <button type="submit">Filter</button>
       </form>
-      {!res.ok && <p className="empty" role="alert">Races are unavailable right now.</p>}
-      {res.ok && items.length === 0 && <p className="empty">No races match these filters.</p>}
+      {!res?.ok && <p className="empty" role="alert">Races are unavailable right now.</p>}
+      {res?.ok && items.length === 0 && <p className="empty">No races match these filters.</p>}
       <ul className="results">
         {items.map((r) => (
           <li key={r.id}>
