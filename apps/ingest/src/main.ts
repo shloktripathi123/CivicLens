@@ -32,7 +32,12 @@ async function main() {
   await ingestPlaces(db);
   console.log(`Local government: ${await ingestLocalGov(db)} school districts plus curated units.`);
   console.log(`State election offices: ${await ingestVotingInfo(db)} linked.`);
-  { const v = await ingestVoteview(db); console.log(`Voteview: ${v.votes} votes, ${v.scores} scores.`); }
+  if (process.env.SKIP_VOTEVIEW === "1") {
+    console.log("Voteview skipped; existing Voteview records are not removed.");
+  } else {
+    const v = await ingestVoteview(db);
+    console.log(`Voteview: ${v.votes} votes, ${v.scores} scores.`);
+  }
   { const f = await ingestFederalRecords(db); console.log(`Federal: ${f.bills} bills, ${f.funding} funding rows.`); }
   console.log(`Open States: ${await ingestOpenStates(db)} state legislators.`);
   console.log(`Open States bills: ${await ingestStateBills(db)} sponsorship records.`);

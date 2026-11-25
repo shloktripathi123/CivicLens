@@ -163,6 +163,12 @@ test("coverage links only to sources present in the database", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Test records" })).toBeVisible();
 });
 
+test("profiles explain gaps when voting records are unavailable", async ({ page }) => {
+  await page.goto(`/people/${official}`);
+  await page.locator("summary").filter({ hasText: "Floor votes" }).click();
+  await expect(page.getByText(/No recorded history in our data for recorded floor votes/)).toBeVisible();
+});
+
 test("credibility dialog handles success and service errors", async ({ page }) => {
   await page.goto(`/people/${official}`);
   const badge = page.getByRole("button", { name: /Source credibility/ }).first();

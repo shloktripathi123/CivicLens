@@ -122,8 +122,7 @@ tests, a production web build and the isolated Playwright suite. Pushes to
 deployment credentials. GitHub Actions must be enabled; the workflows have not
 configured your repository's secrets or Cloudflare resources for you.
 
-1. Review [third-party data terms](DATA_SOURCES.md), including the unresolved
-   Voteview redistribution terms, before publishing *any* database or generated
+1. Review [third-party data terms](DATA_SOURCES.md) before publishing any database or generated
    assets. GitHub Actions artifacts in a public repository may be downloadable
    by people with repository access. Do not approve the snapshot workflow until
    you have the necessary rights for **every** included dataset. The project
@@ -147,7 +146,13 @@ configured your repository's secrets or Cloudflare resources for you.
 4. The workflow freshly ingests data, checks integrity, citations and minimum
    coverage, rejects correction submissions, and uploads a 90-day
    `civic-lens-db` artifact. These checks do not prove complete or current data
-   or redistribution rights; inspect ingestion logs and coverage. Set the
+   or redistribution rights; inspect ingestion logs and coverage. It excludes
+   Voteview: its roll-call votes and ideology scores will not be available in
+   the snapshot. Other sources still require a rights review. Local ingestion
+   continues to include Voteview unless `SKIP_VOTEVIEW=1` is set; this option
+   does not remove existing records, so use a fresh database when excluding it.
+   The deployment validator rejects databases containing the Voteview source.
+   Set the
    `production` environment variable `CIVIC_DB_RUN_ID` to the numeric run ID
    of the successful approved snapshot (shown in its Actions URL). Then rerun
    the failed deployment job from that `main` run, or push a new commit to

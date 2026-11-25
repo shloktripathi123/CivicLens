@@ -29,7 +29,7 @@ function Slot({ k, slot, officialUrl }: { k: DeepKey; slot: DeepSlot | undefined
         </ul>
       ) : (
         <p className="na">
-          No recorded history in our data. We checked: {slot?.checked ?? "this record type"}. This is a gap in our sources,
+          No recorded history in our data for {slot?.checked ?? "this record type"}. This is a gap in our sources,
           not a statement that nothing exists.
           {officialUrl && !(slot?.lookups ?? []).length && <> Look it up at <a href={officialUrl.href}>{officialUrl.label}</a>.</>}
         </p>

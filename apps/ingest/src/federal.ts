@@ -39,14 +39,17 @@ async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
 
 const usd = (n: number | null | undefined) => (n == null ? "n/a" : "$" + Math.round(n).toLocaleString("en-US"));
 
-/** Sitting members = people with Voteview records (119th Congress). Needs CONGRESS_API_KEY / FEC_API_KEY. */
+/** Ingest records for members with a current federal congressional term. */
 export async function ingestFederalRecords(db: DB): Promise<{ bills: number; funding: number }> {
   const ckey = process.env.CONGRESS_API_KEY, fkey = process.env.FEC_API_KEY;
+  const asOf = new Date().toISOString().slice(0, 10);
+  const currentTerm = "EXISTS (SELECT 1 FROM office_term t WHERE t.person_id = pi.person_id " +
+    "AND t.level = 'federal' AND t.body IN ('U.S. House', 'U.S. Senate') " +
+    "AND t.start_date <= ? AND (t.end_date IS NULL OR t.end_date >= ?))";
   const members = db.prepare(
     "SELECT DISTINCT pi.person_id AS id, pi.value AS bioguide FROM person_identifier pi " +
-    "WHERE pi.scheme = 'bioguide' AND EXISTS (SELECT 1 FROM official_record r WHERE r.person_id = pi.person_id AND r.source_id = 'voteview')",
-  ).all() as Array<{ id: string; bioguide: string }>;
-  const asOf = new Date().toISOString().slice(0, 10);
+    `WHERE pi.scheme = 'bioguide' AND ${currentTerm}`,
+  ).all(asOf, asOf) as Array<{ id: string; bioguide: string }>;
   const ins = db.prepare("INSERT INTO official_record (person_id,section,title,detail,date,publisher,url,source_id,as_of) VALUES (?,?,?,?,?,?,?,?,?)");
   const out = { bills: 0, funding: 0 };
 
@@ -74,8 +77,8 @@ export async function ingestFederalRecords(db: DB): Promise<{ bills: number; fun
   if (fkey) {
     upsertSource(db, FEC_SRC);
     const fec = db.prepare(
-      "SELECT pi.person_id AS id, pi.value AS fec FROM person_identifier pi WHERE pi.scheme = 'fec' AND EXISTS (SELECT 1 FROM official_record r WHERE r.person_id = pi.person_id AND r.source_id = 'voteview')",
-    ).all() as Array<{ id: string; fec: string }>;
+      `SELECT DISTINCT pi.person_id AS id, pi.value AS fec FROM person_identifier pi WHERE pi.scheme = 'fec' AND ${currentTerm}`,
+    ).all(asOf, asOf) as Array<{ id: string; fec: string }>;
     const rows: Array<[string, string, any]> = [];
     await pool(fec, 6, async (m) => {
       const j = await getJson(`https://api.open.fec.gov/v1/candidate/${m.fec}/totals/?sort=-cycle&per_page=3&api_key=${fkey}`);

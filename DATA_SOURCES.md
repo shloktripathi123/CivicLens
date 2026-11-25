@@ -25,7 +25,9 @@ provider terms and the rights for the particular material before reuse.
   and requests a dataset citation. Its data page does not specify a general
   redistribution license. Confirm permission with the provider before
   redistributing a dataset or derived material; the license of its website
-  software does not establish a license for its data.
+  software does not establish a license for its data. The deployment snapshot
+  excludes Voteview; local ingestion includes it by default. Skipping ingestion
+  does not remove Voteview records already present in an existing database.
 - [U.S. Census Bureau](https://www.census.gov/about/policies/citation.html):
   cite the Census Bureau as the original data source. Verify rights for any
   separately attributed third-party material.
