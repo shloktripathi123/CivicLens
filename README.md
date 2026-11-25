@@ -75,7 +75,9 @@ The test suite requires a populated default `data/civic.db`, including data
 from sources that require API keys. Some tests skip without it; others fail or
 create an empty database. Some integration assertions also depend on historical
 2026 records and comprehensive source coverage, so a fresh or rate-limited
-ingest does not necessarily satisfy them. The production web build requires a
+ingest does not necessarily satisfy them. The full suite runs test files
+sequentially to reduce interference with its search-latency measurement.
+The production web build requires a
 public HTTPS API URL; the example above only checks the build and is not a
 working deployment.
 
@@ -94,8 +96,8 @@ the offices and candidacies present in the selected database snapshot.
 Federal election cycles advance when data is ingested. Federal races are
 inferred from known office terms and may be incomplete, especially for vacant
 seats. FEC filings without a matching scheduled race are omitted rather than
-used to infer a contest. Governor data includes a hard-coded historical 2026
-snapshot; future state and local races are not comprehensively covered.
+used to infer a contest. The ingest does not provide comprehensive state or
+local races, including governor races.
 Election information is not a substitute for an official sample ballot.
 
 ## Cloudflare deployment

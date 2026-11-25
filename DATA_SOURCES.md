@@ -35,10 +35,14 @@ provider terms and the rights for the particular material before reuse.
   public availability does not eliminate restrictions on the sale or use of
   individual contributor information. Review the FEC's rules before using or
   redistributing such information.
-- Congress.gov, Oregon, and local-government websites: check the terms and
-  rights applicable to each source and any included third-party material.
-  A "public record" label alone is not a copyright license.
+- [Oregon Legislature OData](https://www.oregonlegislature.gov/citizen_engagement/Pages/data.aspx):
+  the Legislature provides an open-data service and links to an
+  [acceptable-use agreement](https://www.oregonlegislature.gov/citizen_engagement/Documents/OLODataAcceptableUseAgreement.pdf).
+  Review and comply with the agreement before using the service.
+- Congress.gov, other Oregon sources, and local-government websites: check the
+  terms and rights applicable to each source and any included third-party
+  material. A "public record" label alone is not a copyright license.
 
-The curated local-government snapshot and Oregon seed contain historical
-information and source links; review their accuracy, attribution, and reuse
-rights before redistributing derived datasets or publishing them as current.
+The curated local-government snapshot contains historical information and
+source links; review its accuracy, attribution, and reuse rights before
+redistributing derived datasets or publishing them as current.

@@ -30,7 +30,7 @@ test("future federal races use known terms without inventing state races", () =>
     assert.ok(races.some((r) => r.body === "U.S. Senate" && r.date === "2028-11-07" && r.jurisdiction === "OR"));
     assert.ok(!races.some((r) => r.body === "U.S. Senate" && r.date === "2028-11-07" && r.jurisdiction === "WA"));
     assert.ok(races.some((r) => r.body === "President" && r.date === "2028-11-07"));
-    assert.ok(!races.some((r) => r.body.includes("executive") && r.date === "2028-11-07"));
+    assert.ok(!races.some((r) => r.body.includes("executive")));
   } finally {
     db.close();
   }

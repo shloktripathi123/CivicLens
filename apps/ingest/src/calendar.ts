@@ -20,9 +20,6 @@ export const STATE_NAMES: Record<string, string> = {
   VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
 };
 
-/** Historical 2026 governor races; this list does not establish races in future cycles. */
-const GOVERNORS_2026 = "AL AK AZ AR CA CO CT FL GA HI ID IL IA KS ME MD MA MI MN NE NV NH NM NY OH OK OR PA RI SC SD TN TX VT WI WY".split(" ");
-
 /** Election Day: the Tuesday after the first Monday in November. */
 export function electionDay(year: number): string {
   const d = new Date(Date.UTC(year, 10, 1));
@@ -40,7 +37,7 @@ export function nextFederalCycle(asOf: string): number {
 
 /**
  * Federal general-election dates and races inferred from known office terms.
- * State race coverage is limited to the curated historical 2026 governor list.
+ * State and local race coverage requires a separate source.
  */
 export function ingestCalendar(db: DB, asOf = new Date().toISOString().slice(0, 10)): number {
   upsertSource(db, SRC);
@@ -61,11 +58,6 @@ export function ingestCalendar(db: DB, asOf = new Date().toISOString().slice(0, 
       "SELECT DISTINCT state FROM office_term WHERE body = 'U.S. Senate' AND start_date <= ? AND end_date = ? AND state IS NOT NULL",
     ).all(date, `${year + 1}-01-03`) as Array<{ state: string }>;
     for (const s of senators) race("federal", "U.S. Senate", s.state, `U.S. Senator from ${s.state}`, null, date);
-  }
-  const historicalGovernorDate = electionDay(2026);
-  for (const st of GOVERNORS_2026) {
-    const name = STATE_NAMES[st];
-    race("state", `${name} executive`, st, `Governor of ${name}`, null, historicalGovernorDate);
   }
   const presidentialYear = next + (4 - next % 4) % 4;
   race("federal", "President", "US", "President of the United States", null, electionDay(presidentialYear));

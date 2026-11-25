@@ -3,7 +3,6 @@ import { EXCLUSIONS } from "../../api/src/exclusions.ts";
 import { checkLinks } from "./linkcheck.ts";
 import { ingest } from "./adapter.ts";
 import { ingestExecutive } from "./executive.ts";
-import { ingestOregon } from "./oregon.ts";
 import { ingestOregonBills } from "./oregonLeg.ts";
 import { ingestOregonLegislators } from "./oregonLegislators.ts";
 import { ingestCalendar } from "./calendar.ts";
@@ -23,7 +22,6 @@ async function main() {
   const db = openDb();
   await ingest(db);
   await ingestExecutive(db);
-  ingestOregon(db);
   await ingestRoster(db);
   await ingestOregonBills(db);
   console.log("Oregon legislators: " + (await ingestOregonLegislators(db)) + " linked to their bills.");

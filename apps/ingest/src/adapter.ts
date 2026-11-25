@@ -112,7 +112,7 @@ export async function ingest(db: DB = openDb()) {
   ]);
 
   tx(db, () => {
-    for (const t of ["state_voting", "gov_area", "gov_holder", "gov_meeting", "gov_office", "gov_unit", "bill_action", "bill_sponsor", "bill", "place_overlap", "place", "result", "finance_summary", "agenda_item", "candidacy", "race", "election", "office", "education", "career_item", "coverage", "social", "committee_membership", "committee", "office_term", "person_name", "person_identifier", "person", "source"])
+    for (const t of ["official_record", "voting_window", "state_voting", "gov_area", "gov_holder", "gov_meeting", "gov_office", "gov_unit", "bill_action", "bill_sponsor", "bill", "place_overlap", "place", "result", "finance_summary", "agenda_item", "candidacy", "race", "election", "office", "education", "career_item", "coverage", "social", "committee_membership", "committee", "office_term", "person_name", "person_identifier", "person", "source"])
       db.exec(`DELETE FROM ${t}`);
     db.prepare("INSERT INTO source (id,name,url,license,attribution,retrieved_at) VALUES (?,?,?,?,?,?)").run(
       SRC.id, SRC.name, SRC.url, SRC.license, SRC.attribution, new Date().toISOString(),

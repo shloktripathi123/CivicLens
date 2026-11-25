@@ -7,7 +7,7 @@ const DEADLINE_ITEMS = ["Registration deadlines", "Early-voting and ballot-by-ma
 export const NOT_IN_OUR_DATA = [
   ...DEADLINE_ITEMS,
   "Primary, runoff and special-election dates",
-  "Most state and local contests, including future governor races",
+  "Most state and local contests, including governor races",
   "Ballot measures",
   "Local contests and your personal sample ballot",
 ];
@@ -39,6 +39,6 @@ export function buildCalendar(db: DB, state: string | undefined, now = new Date(
       personalBallot: "Your ballot depends on your address. Use your state's official voter-information and sample-ballot tools; Civic Lens does not generate a ballot.",
     },
     notInOurData: wins.length ? NOT_IN_OUR_DATA.filter((n) => !DEADLINE_ITEMS.includes(n)).concat("Registration, mail-ballot and drop-box dates for states other than Oregon") : NOT_IN_OUR_DATA,
-    coverage: "Federal general-election races are inferred from known office terms and may be incomplete. State races are limited to curated historical coverage. Federal candidates come from FEC filings. Confirm dates and deadlines with your state's official site.",
+    coverage: "Federal general-election races are inferred from known office terms and may be incomplete. State and local race coverage is incomplete. Federal candidates come from FEC filings. Confirm dates and deadlines with your state's official site.",
   };
 }
