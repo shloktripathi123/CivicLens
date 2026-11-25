@@ -17,18 +17,30 @@ state election office.
 
 Requirements: Node.js 22.13 or later and npm. Ingestion downloads public data
 from several upstream services and may take a long time or encounter rate limits.
+The database is not included in the repository.
 
 ```bash
+git clone https://github.com/shloktripathi123/CivicLens.git
+cd CivicLens
 npm ci
 cp .env.example .env
 # Optionally edit .env to add API keys.
 node --env-file=.env --import tsx apps/ingest/src/main.ts
 ```
 
+For fuller local data, obtain keys from [Congress.gov](https://api.congress.gov/sign-up),
+the [FEC via Data.gov](https://api.data.gov/signup/), and
+[Open States](https://open.pluralpolicy.com/api/register/), then put them in
+`.env`. A keyless ingest is incomplete; the FEC demo key is rate-limited.
+The snapshot workflow described below requires all three keys.
+
 Ingestion rebuilds portions of the database and deletes existing records.
 Back up any database you want to keep before running it. The default database is
-`data/civic.db`; `DB_PATH` changes it for the ingest process. LegiScan ingestion
-is currently unavailable because its adapter has not been implemented.
+`data/civic.db`; use an absolute `DB_PATH` if choosing another location, so
+commands run from different directories use the same database. If you already
+copied an older `.env.example`, remove the relative `DB_PATH=data/civic.db`
+line to use the default. LegiScan ingestion is currently unavailable because
+its adapter has not been implemented.
 
 Run the API and web app in separate terminals:
 
@@ -38,10 +50,12 @@ npm run dev:web       # http://localhost:3000
 ```
 
 Alternatively, `./run.sh` starts the API and web app on ports 4000 and 3100.
-It requires `lsof` and `curl` and refuses to start if either port is in use.
+It requires `lsof` and `curl`, loads `.env` for the API, and refuses to start
+if either port is in use. Open http://localhost:3100 and press Ctrl+C in the
+terminal to stop it.
 
 The npm development commands do not load the root `.env` file. If you changed
-`DB_PATH`, supply the same value to the API process, for example
+`DB_PATH`, supply the same absolute value to the API process, for example
 `DB_PATH=/absolute/path/to/civic.db npm run dev:api`. The web app defaults to
 the local API in development; set `NEXT_PUBLIC_API_URL` if it is elsewhere.
 Do not commit `.env` or other credentials.
@@ -80,9 +94,9 @@ the offices and candidacies present in the selected database snapshot.
 Federal election cycles advance when data is ingested. Federal races are
 inferred from known office terms and may be incomplete, especially for vacant
 seats. FEC filings without a matching scheduled race are omitted rather than
-used to infer a contest. Governor data includes a curated 2026 snapshot; future state and local
-races are not comprehensively covered. Election information is not a substitute
-for an official sample ballot.
+used to infer a contest. Governor data includes a hard-coded historical 2026
+snapshot; future state and local races are not comprehensively covered.
+Election information is not a substitute for an official sample ballot.
 
 ## Cloudflare deployment
 
@@ -114,22 +128,31 @@ configured your repository's secrets or Cloudflare resources for you.
    by people with repository access. Do not approve the snapshot workflow until
    you have the necessary rights for **every** included dataset. The project
    license does not grant those rights.
-2. Configure the `data-snapshot` GitHub environment with secrets
-   `CONGRESS_API_KEY`, `FEC_API_KEY`, and `OPENSTATES_API_KEY`. Restrict who can
-   dispatch/approve this environment. Manually run **Publish data snapshot**
-   from `main` and affirm the rights confirmation. It performs a fresh ingest
-   into a new database, checks integrity, citations and minimum coverage, rejects
-   databases containing correction submissions, and uploads a 90-day
-   `civic-lens-db` artifact. The checks are minimum sanity checks, not proof of
-   complete or current data; inspect ingestion logs and coverage before use.
-3. Configure the `production` environment with secrets `CLOUDFLARE_API_TOKEN`
-   and `CLOUDFLARE_ACCOUNT_ID`, and variables `NEXT_PUBLIC_API_URL` (the public
-   HTTPS API origin) and `CIVIC_DB_RUN_ID` (the numeric run ID of the approved
-   successful snapshot workflow). The token needs permission to deploy both
-   configured Workers and access the configured D1 binding. Protect the
-   environment and `main` branch so only trusted maintainers can change code,
-   snapshot selection, and deployment settings.
-4. A push to `main` checks the pinned run's workflow, branch, event and success,
+2. In your repository's **Settings → Environments**, configure `data-snapshot`
+   with secrets `CONGRESS_API_KEY`, `FEC_API_KEY`, and `OPENSTATES_API_KEY`.
+   Restrict who can dispatch and approve this environment. Configure
+   `production` with secrets `CLOUDFLARE_API_TOKEN` and
+   `CLOUDFLARE_ACCOUNT_ID`, and a `NEXT_PUBLIC_API_URL` variable containing the
+   public HTTPS API origin. The token needs permission to deploy both Workers
+   and access the configured D1 binding. Never commit or share the keys.
+   Protect the environments and `main` branch so only trusted maintainers can
+   change code, snapshot selection, and deployment settings.
+3. The snapshot workflow must exist on `main` before it can be dispatched. On
+   the first merge that adds it, there is no snapshot yet: the deployment job
+   fails safely before deploying because `CIVIC_DB_RUN_ID` is missing. Once
+   rights are verified, merge the workflow, then manually run **Publish data
+   snapshot** on `main` from the repository's **Actions** tab. Affirm the rights
+   confirmation only after checking every included dataset, and approve the
+   `data-snapshot` environment if required.
+4. The workflow freshly ingests data, checks integrity, citations and minimum
+   coverage, rejects correction submissions, and uploads a 90-day
+   `civic-lens-db` artifact. These checks do not prove complete or current data
+   or redistribution rights; inspect ingestion logs and coverage. Set the
+   `production` environment variable `CIVIC_DB_RUN_ID` to the numeric run ID
+   of the successful approved snapshot (shown in its Actions URL). Then rerun
+   the failed deployment job from that `main` run, or push a new commit to
+   `main` after configuration.
+5. A push to `main` checks the pinned run's workflow, branch, event and success,
    downloads its artifact, verifies its checksum and reruns the database checks.
    The job fails explicitly if configuration or the artifact is missing or
    expired; create and select a new snapshot before its 90-day retention ends.
