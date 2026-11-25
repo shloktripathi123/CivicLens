@@ -155,18 +155,22 @@ async function getJson(url: string, accept: string): Promise<unknown> {
 }
 
 /** Never fails the whole ingest: an unreachable source leaves the roster incomplete and says so. */
-export async function ingestRoster(db: DB) {
+export async function ingestRoster(db: DB, { skipWikipedia = false }: { skipWikipedia?: boolean } = {}) {
   const asOf = new Date().toISOString().slice(0, 10);
   let entries: RosterEntry[] = [];
-  try {
-    const wp = (await getJson(
-      "https://en.wikipedia.org/w/api.php?action=parse&page=List_of_current_United_States_governors&prop=wikitext&format=json&formatversion=2",
-      "application/json",
-    )) as { parse: { wikitext: string } };
-    const govs = parseGovernors(wp.parse.wikitext);
-    console.log(`Roster: ${govs.length} governors parsed (expected 50).`);
-    entries.push(...govs);
-  } catch (e) { console.warn(`Roster: governors skipped (${(e as Error).message})`); }
+  if (skipWikipedia) {
+    console.log("Roster: Wikipedia governors skipped.");
+  } else {
+    try {
+      const wp = (await getJson(
+        "https://en.wikipedia.org/w/api.php?action=parse&page=List_of_current_United_States_governors&prop=wikitext&format=json&formatversion=2",
+        "application/json",
+      )) as { parse: { wikitext: string } };
+      const govs = parseGovernors(wp.parse.wikitext);
+      console.log(`Roster: ${govs.length} governors parsed (expected 50).`);
+      entries.push(...govs);
+    } catch (e) { console.warn(`Roster: governors skipped (${(e as Error).message})`); }
+  }
   try {
     const wd = (await getJson(
       `https://query.wikidata.org/sparql?query=${encodeURIComponent(positionsQuery())}`, "application/sparql-results+json",
@@ -176,8 +180,8 @@ export async function ingestRoster(db: DB) {
     entries.push(...people);
   } catch (e) { console.warn(`Roster: justices and cabinet skipped (${(e as Error).message})`); }
   if (!entries.length) return;
-  upsertSource(db, WIKIPEDIA);
-  upsertSource(db, WIKIDATA);
+  if (entries.some((e) => e.sourceId === WIKIPEDIA.id)) upsertSource(db, WIKIPEDIA);
+  if (entries.some((e) => e.sourceId === WIKIDATA.id)) upsertSource(db, WIKIDATA);
   db.exec("BEGIN");
   try {
     const r = loadRoster(db, entries, asOf);

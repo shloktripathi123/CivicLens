@@ -20,15 +20,20 @@ import { gradeSources } from "./sources.ts";
 
 async function main() {
   const db = openDb();
+  const skipUnreviewed = process.env.SKIP_UNREVIEWED_SOURCES === "1";
   await ingest(db);
   await ingestExecutive(db);
-  await ingestRoster(db);
-  await ingestOregonBills(db);
-  console.log("Oregon legislators: " + (await ingestOregonLegislators(db)) + " linked to their bills.");
+  await ingestRoster(db, { skipWikipedia: skipUnreviewed });
+  if (skipUnreviewed) {
+    console.log("Oregon OData and curated local government skipped; existing records are not removed.");
+  } else {
+    await ingestOregonBills(db);
+    console.log("Oregon legislators: " + (await ingestOregonLegislators(db)) + " linked to their bills.");
+  }
   console.log(`Race calendar: ${ingestCalendar(db)} statutory races ensured.`);
   await ingestFec(db);
   await ingestPlaces(db);
-  console.log(`Local government: ${await ingestLocalGov(db)} school districts plus curated units.`);
+  if (!skipUnreviewed) console.log(`Local government: ${await ingestLocalGov(db)} school districts plus curated units.`);
   console.log(`State election offices: ${await ingestVotingInfo(db)} linked.`);
   if (process.env.SKIP_VOTEVIEW === "1") {
     console.log("Voteview skipped; existing Voteview records are not removed.");

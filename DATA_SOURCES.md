@@ -24,7 +24,8 @@ provider terms and the rights for the particular material before reuse.
   roster parses the [list of current governors](https://en.wikipedia.org/wiki/List_of_current_United_States_governors)
   into structured fields. The source page currently links to Wikipedia's
   homepage rather than that list or the license text; review the applicable
-  attribution and licensing requirements before publishing this data.
+  attribution and licensing requirements before publishing this data. The
+  deployment snapshot excludes this roster.
 - [Voteview](https://voteview.com/data): the provider offers public downloads
   and requests a dataset citation. Its data page does not specify a general
   redistribution license. Confirm permission with the provider before
@@ -48,7 +49,8 @@ provider terms and the rights for the particular material before reuse.
   not enforce that window or explicitly fetch the metadata document. The
   published data page does not explain how to accept the agreement; contact
   [the legislative help desk](mailto:leg.helpdesk@oregonlegislature.gov)
-  for the acceptance procedure and clarify compliance before use.
+  for the acceptance procedure and clarify compliance before use. The
+  deployment snapshot excludes Oregon Legislature OData.
 - Congress.gov, other Oregon sources, and local-government websites: check the
   terms and rights applicable to each source and any included third-party
   material. A "public record" label alone is not a copyright license.
@@ -58,4 +60,5 @@ source links; review its accuracy, attribution, and reuse rights before
 redistributing derived datasets or publishing them as current. It includes
 holder names, office details, and meeting information from multiple official
 websites, so the review must cover each source rather than assuming one
-license applies to all of them.
+license applies to all of them. The deployment snapshot excludes this curated
+data and its associated TriMet ingestion.

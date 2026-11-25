@@ -11,8 +11,11 @@ try {
   if (foreignKeyError) throw new Error(`Database foreign key check failed: ${JSON.stringify(foreignKeyError)}`);
   const uncited = uncitedFacts(db);
   if (uncited.length) throw new Error(`Facts without graded sources: ${JSON.stringify(uncited)}`);
-  const { n: voteview } = db.prepare("SELECT count(*) AS n FROM source WHERE id = 'voteview'").get() as { n: number };
-  if (voteview !== 0) throw new Error("Snapshot contains Voteview data; use a fresh database with Voteview excluded.");
+  const excludedSources = ["voteview", "wikipedia-en", "oregon-legislature-odata", "local-gov-official"];
+  const sourceExists = db.prepare("SELECT 1 FROM source WHERE id = ?");
+  for (const id of excludedSources) {
+    if (sourceExists.get(id)) throw new Error(`Snapshot contains excluded source ${id}; use a fresh database with excluded sources skipped.`);
+  }
   const checks: Array<[string, string, number]> = [
     ["people", "SELECT count(*) AS n FROM person", 1000],
     ["office terms", "SELECT count(*) AS n FROM office_term", 1000],

@@ -8,7 +8,7 @@ and jurisdiction; consult the app's coverage and source information.
 [Source code](https://github.com/shloktripathi123/CivicLens)
 
 Search by name or place from the home page, browse people and races, or explore
-elections, Oregon bills, and local-government records. Source links and
+elections, bills, and available local-government records. Source links and
 coverage notes explain where information comes from and what is missing.
 Civic Lens is not an official voter guide; confirm election details with your
 state election office.
@@ -149,11 +149,15 @@ configured your repository's secrets or Cloudflare resources for you.
    coverage, rejects correction submissions, and uploads a 90-day
    `civic-lens-db` artifact. These checks do not prove complete or current data
    or redistribution rights; inspect ingestion logs and coverage. It excludes
-   Voteview: its roll-call votes and ideology scores will not be available in
-   the snapshot. Other sources still require a rights review. Local ingestion
-   continues to include Voteview unless `SKIP_VOTEVIEW=1` is set; this option
-   does not remove existing records, so use a fresh database when excluding it.
-   The deployment validator rejects databases containing the Voteview source.
+   Voteview, Wikipedia's governor roster, Oregon Legislature OData, and the
+   curated local-government dataset. Governor and local-government coverage
+   will be reduced; Oregon legislative records may still come from other
+   sources. School-district data from the local-government ingest is also
+   omitted. Other sources still require a rights review. Local ingestion
+   retains its defaults unless `SKIP_VOTEVIEW=1` and
+   `SKIP_UNREVIEWED_SOURCES=1` are set. These options do not remove existing
+   records; use a fresh database. The deployment validator rejects databases
+   containing any of the excluded sources.
    Set the
    `production` environment variable `CIVIC_DB_RUN_ID` to the numeric run ID
    of the successful approved snapshot (shown in its Actions URL). Then rerun
