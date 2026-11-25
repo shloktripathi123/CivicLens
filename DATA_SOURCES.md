@@ -20,7 +20,11 @@ provider terms and the rights for the particular material before reuse.
 - [Wikipedia](https://wikimediafoundation.org/what-we-do/wikimedia-projects/wikipedia/):
   text reuse is generally subject to CC BY-SA attribution and share-alike
   requirements. Check each article and media file, provide appropriate
-  attribution and links, and follow the applicable license.
+  attribution and links, and follow the applicable license. The governor
+  roster parses the [list of current governors](https://en.wikipedia.org/wiki/List_of_current_United_States_governors)
+  into structured fields. The source page currently links to Wikipedia's
+  homepage rather than that list or the license text; review the applicable
+  attribution and licensing requirements before publishing this data.
 - [Voteview](https://voteview.com/data): the provider offers public downloads
   and requests a dataset citation. Its data page does not specify a general
   redistribution license. Confirm permission with the provider before
@@ -38,11 +42,20 @@ provider terms and the rights for the particular material before reuse.
 - [Oregon Legislature OData](https://www.oregonlegislature.gov/citizen_engagement/Pages/data.aspx):
   the Legislature provides an open-data service and links to an
   [acceptable-use agreement](https://www.oregonlegislature.gov/citizen_engagement/Documents/OLODataAcceptableUseAgreement.pdf).
-  Review and comply with the agreement before using the service.
+  The agreement calls for electronic acceptance, receiving associated metadata,
+  reporting data or service problems, and limits database full refreshes to
+  once daily between 5 p.m. and 6 a.m. Pacific time. The current ingest does
+  not enforce that window or explicitly fetch the metadata document. The
+  published data page does not explain how to accept the agreement; contact
+  [the legislative help desk](mailto:leg.helpdesk@oregonlegislature.gov)
+  for the acceptance procedure and clarify compliance before use.
 - Congress.gov, other Oregon sources, and local-government websites: check the
   terms and rights applicable to each source and any included third-party
   material. A "public record" label alone is not a copyright license.
 
 The curated local-government snapshot contains historical information and
 source links; review its accuracy, attribution, and reuse rights before
-redistributing derived datasets or publishing them as current.
+redistributing derived datasets or publishing them as current. It includes
+holder names, office details, and meeting information from multiple official
+websites, so the review must cover each source rather than assuming one
+license applies to all of them.
