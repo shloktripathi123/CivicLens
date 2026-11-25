@@ -17,7 +17,7 @@ export default async function RacesPage({ searchParams }: { searchParams: Promis
         <label>Year<input name="year" defaultValue={sp.year} inputMode="numeric" /></label>
         <button type="submit">Filter</button>
       </form>
-      {!res?.ok && <p className="empty" role="alert">Races are unavailable right now.</p>}
+      {!res?.ok && <p className="empty" role="alert">{res?.status === 400 ? "Enter a valid two-letter state and whole-number year." : "Races are unavailable right now."}</p>}
       {res?.ok && items.length === 0 && <p className="empty">No races match these filters.</p>}
       <ul className="results">
         {items.map((r) => (

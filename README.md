@@ -64,6 +64,10 @@ missing pages and service errors, not every possible jurisdiction or dataset.
 The existing recorded walkthrough remains available with the original
 `playwright.config.ts`.
 
+People search's office-type filter includes candidates for recognized offices
+and state legislators in the corresponding chamber. Coverage still depends on
+the offices and candidacies present in the selected database snapshot.
+
 Federal election cycles advance when data is ingested. Federal races are
 inferred from known office terms and may be incomplete, especially for vacant
 seats. FEC filings without a matching scheduled race are omitted rather than

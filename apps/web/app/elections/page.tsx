@@ -52,8 +52,8 @@ function ElectionBlock({ e }: { e: Election }) {
 
 export default async function ElectionsPage({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
   const { state } = await searchParams;
-  const res = await fetch(`${API_URL}/v1/calendar${state ? `?state=${encodeURIComponent(state)}` : ""}`, { cache: "no-store" });
-  const cal: Calendar | null = res.ok ? await res.json() : null;
+  const res = await fetch(`${API_URL}/v1/calendar${state ? `?state=${encodeURIComponent(state)}` : ""}`, { cache: "no-store" }).catch(() => null);
+  const cal: Calendar | null = res?.ok ? await res.json() : null;
   return (
     <article>
       <h1>Elections and voting</h1>
@@ -62,7 +62,7 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
         <label>State (e.g. OR)<input name="state" maxLength={2} defaultValue={state} /></label>
         <button type="submit">Show</button>
       </form>
-      {!cal && <p className="empty" role="alert">{res.status === 400 ? "Enter a 2-letter state code." : "The calendar is unavailable right now."}</p>}
+      {!cal && <p className="empty" role="alert">{res?.status === 400 ? "Enter a 2-letter state code." : "The calendar is unavailable right now."}</p>}
       {cal && (
         <>
           <section className="block" aria-labelledby="how-h">

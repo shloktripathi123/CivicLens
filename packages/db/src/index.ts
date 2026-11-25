@@ -355,6 +355,20 @@ export function allPersonMeta(db: DB): PersonMeta[] {
               (SELECT group_concat(DISTINCT party) FROM office_term WHERE person_id=p.id) AS parties,
               (SELECT group_concat(DISTINCT state) FROM office_term WHERE person_id=p.id) AS states,
               (SELECT group_concat(DISTINCT office_type) FROM office_term WHERE person_id=p.id) AS officeTypes,
+              (SELECT group_concat(DISTINCT CASE
+                 WHEN lower(body) LIKE '%senate%' OR lower(title) LIKE '%senator%' THEN 'senate'
+                 WHEN lower(body) LIKE '%house%' OR lower(title) LIKE '%representative%' THEN 'house'
+                 ELSE NULL END) FROM office_term WHERE person_id=p.id AND level='state') AS legislativeTypes,
+              (SELECT group_concat(DISTINCT CASE
+                 WHEN lower(o.title) LIKE '%vice president%' THEN 'vice_president'
+                 WHEN lower(o.title) LIKE '%president%' THEN 'president'
+                 WHEN lower(o.body) LIKE '%senate%' OR lower(o.title) LIKE '%senator%' THEN 'senate'
+                 WHEN lower(o.body) LIKE '%house%' OR lower(o.title) LIKE '%representative%' THEN 'house'
+                 WHEN lower(o.title) LIKE '%governor%' THEN 'governor'
+                 WHEN lower(o.title) LIKE '%justice%' OR lower(o.title) LIKE '%judge%' THEN 'judge'
+                 ELSE NULL END)
+               FROM candidacy c JOIN race ra ON ra.id=c.race_id JOIN office o ON o.id=ra.office_id
+               WHERE c.person_id=p.id) AS candidateTypes,
               (SELECT COUNT(*) FROM candidacy WHERE person_id=p.id) AS ncand,
               (SELECT group_concat(o.title || ' ' || o.jurisdiction, ' ') FROM candidacy c JOIN race ra ON ra.id=c.race_id
                  JOIN office o ON o.id=ra.office_id WHERE c.person_id=p.id) AS officeSought,
@@ -379,7 +393,7 @@ export function allPersonMeta(db: DB): PersonMeta[] {
     states: [r.states, r.candStates].filter(Boolean).join(","),
     family: (r.family ?? "").toLowerCase(),
     candidate: Number(r.ncand) > 0,
-    officeTypes: r.officeTypes ?? "",
+    officeTypes: [r.officeTypes, r.legislativeTypes, r.candidateTypes].filter(Boolean).join(","),
     officeSought: (r.officeSought ?? "").toLowerCase(),
     electionYear: r.candYear ? Number(r.candYear) : null,
     sought: r.officeSought ?? "",

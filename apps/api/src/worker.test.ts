@@ -134,7 +134,10 @@ function mockEnv(hidden: string[] = []) {
         if (path.endsWith("/places.json")) return Response.json({ items: [] });
         if (path.endsWith("/freshness.json")) return Response.json({ lastUpdated: "2025-01-01" });
         if (path.endsWith("/races.json")) return Response.json({ items: [race] });
-        if (path.endsWith("/calendars.json")) return Response.json({ OR: { state: "OR", elections: [] }, ALL: { elections: [] } });
+        if (path.endsWith("/calendars.json")) return Response.json({
+          OR: { state: "OR", today: "2000-01-01", past: [], upcoming: [{ date: "2000-01-01" }, { date: "2999-01-01" }] },
+          ALL: { state: null, today: "2000-01-01", past: [], upcoming: [] },
+        });
         if (path.endsWith("/government-index.json")) {
           return Response.json({ states: { [governmentUnit.id]: "MA" } });
         }
@@ -236,7 +239,10 @@ test("Cloudflare API serves profiles, races, and election calendars from static 
 
   const calendar = await get("/v1/calendar?state=OR");
   assert.equal(calendar.status, 200);
-  assert.deepEqual(await calendar.json(), { state: "OR", elections: [] });
+  assert.deepEqual(await calendar.json(), {
+    state: "OR", today: new Date().toISOString().slice(0, 10),
+    past: [{ date: "2000-01-01" }], upcoming: [{ date: "2999-01-01" }],
+  });
   const freshness = await get("/v1/meta/freshness");
   assert.equal(freshness.status, 200);
   assert.deepEqual(await freshness.json(), { lastUpdated: "2025-01-01" });

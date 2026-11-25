@@ -56,6 +56,62 @@ test("search, state filters and candidate links reflect real records", async ({ 
   await expect(page.getByRole("link", { name: /Oregon.*State/ })).toBeVisible();
 });
 
+test("office type and body filters include candidates and state officials", async ({ page }) => {
+  await page.goto("/people");
+  await page.getByLabel("Search for a person by name").fill("Example");
+  await page.getByLabel("Office type").selectOption("senate");
+  await expect(page.getByRole("status")).toHaveText("3 results");
+  await expect(page.getByRole("link", { name: /Taylor Example/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Jordan Example/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Morgan Example/ })).toBeVisible();
+  await page.getByLabel("Office type").selectOption("governor");
+  await expect(page.getByText("Nothing matches")).toBeVisible();
+});
+
+test("clearing a search removes its pagination and results", async ({ page }) => {
+  await page.route("**/v1/search?*", (route) => route.fulfill({
+    json: { results: [], total: 25, nextCursor: "MjA" },
+  }));
+  await page.goto("/people");
+  const search = page.getByLabel("Search for a person by name");
+  await search.fill("Example");
+  await expect(page.getByRole("button", { name: "Show more" })).toBeVisible();
+  await search.clear();
+  await expect(page.getByRole("button", { name: "Show more" })).toHaveCount(0);
+  await expect(page.getByRole("status")).toBeEmpty();
+});
+
+test("a delayed earlier search cannot replace newer results", async ({ page }) => {
+  let releaseOld!: () => void;
+  const oldResponse = new Promise<void>((resolve) => { releaseOld = resolve; });
+  let oldStarted!: () => void;
+  const started = new Promise<void>((resolve) => { oldStarted = resolve; });
+  await page.route("**/v1/search?*", async (route) => {
+    const query = new URL(route.request().url()).searchParams.get("q");
+    if (query === "old") {
+      oldStarted();
+      await oldResponse;
+    }
+    await route.fulfill({ json: { results: [], total: query === "old" ? 7 : 0, nextCursor: null } });
+  });
+  await page.goto("/people");
+  const search = page.getByLabel("Search for a person by name");
+  await search.fill("old");
+  await started;
+  await search.fill("new");
+  await expect(page.getByText("Nothing matches “new”")).toBeVisible();
+  const oldFinished = page.waitForResponse((response) => new URL(response.url()).searchParams.get("q") === "old");
+  releaseOld();
+  await oldFinished;
+  await expect(page.getByText("Nothing matches “new”")).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("0 results");
+});
+
+test("invalid race filters explain the input rather than suggesting an outage", async ({ page }) => {
+  await page.goto("/races?year=not-a-year");
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a valid" })).toBeVisible();
+});
+
 test("race, bill, election and place navigation", async ({ page }) => {
   await page.goto("/races");
   await page.getByLabel("State (e.g. OR)").fill("OR");

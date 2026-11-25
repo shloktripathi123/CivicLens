@@ -67,7 +67,16 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
   }
 
   useEffect(() => {
-    if (!q.trim()) { seq.current++; setResults(null); setPlaces([]); setPlaceTotal(0); setError(null); setPlaceError(false); setLoading(false); return; }
+    seq.current++;
+    setResults(null);
+    setPlaces([]);
+    setPlaceTotal(0);
+    setTotal(0);
+    setCursor(null);
+    setError(null);
+    setPlaceError(false);
+    if (!q.trim()) { setLoading(false); return; }
+    setLoading(true);
     const t = setTimeout(() => run(), 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

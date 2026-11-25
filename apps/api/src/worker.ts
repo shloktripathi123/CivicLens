@@ -1220,9 +1220,16 @@ const router = {
       if (request.method === "GET" && url.pathname === "/v1/calendar") {
         const state = url.searchParams.get("state");
         if (state && !/^[A-Za-z]{2}$/.test(state)) return json({ error: "state must be a 2-letter code" }, 400);
-        const data = await searchAsset<Record<string, unknown>>(env, url.origin, "/calendars.json");
+        const data = await searchAsset<Record<string, { today: string; upcoming: Array<{ date: string }>; past: Array<{ date: string }> }>>(env, url.origin, "/calendars.json");
         const calendar = data[state?.toUpperCase() ?? "ALL"];
-        return calendar ? json(calendar) : json({ error: "not found" }, 404);
+        if (!calendar) return json({ error: "not found" }, 404);
+        const today = new Date().toISOString().slice(0, 10);
+        const elections = [...calendar.past, ...calendar.upcoming].sort((a, b) => a.date.localeCompare(b.date));
+        return json({
+          ...calendar, today,
+          upcoming: elections.filter((e) => e.date >= today),
+          past: elections.filter((e) => e.date < today),
+        });
       }
       if (request.method === "GET" && url.pathname === "/v1/sources") {
         return await searchAsset(env, url.origin, "/sources.json").then((data) => json(data));
