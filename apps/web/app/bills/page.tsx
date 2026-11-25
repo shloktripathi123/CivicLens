@@ -30,7 +30,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
         </label>
         <button type="submit">Filter</button>
       </form>
-      <p className="src">{total.toLocaleString()} bills. Status is mapped from the legislature’s own records; Civic Lens does not predict outcomes.</p>
+      {res?.ok && <p className="src">{total.toLocaleString()} bills. Status is mapped from the legislature’s own records; Civic Lens does not predict outcomes.</p>}
       <ul className="results">
         {items.map((b) => (
           <li key={b.id}>

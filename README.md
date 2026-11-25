@@ -4,6 +4,15 @@ Civic Lens is a civic information search application for people, places,
 elections, legislation, and local government. Data coverage varies by source
 and jurisdiction; consult the app's coverage and source information.
 
+[Live demo](https://civic-lens-web.reachshlok.workers.dev/) ·
+[Source code](https://github.com/shloktripathi123/CivicLens)
+
+Search by name or place from the home page, browse people and races, or explore
+elections, Oregon bills, and local-government records. Source links and
+coverage notes explain where information comes from and what is missing.
+Civic Lens is not an official voter guide; confirm election details with your
+state election office.
+
 ## Local development
 
 Requirements: Node.js 22.13 or later and npm. Ingestion downloads public data

@@ -29,8 +29,12 @@ test("main navigation and representative detail pages render", async ({ page }) 
     await expect(page.getByRole("heading", { name: heading, level: 1 }), url).toBeVisible();
     await expect(page.getByText("Application error: a client-side exception")).toHaveCount(0);
   }
+});
+
+test("missing records show a useful not-found page", async ({ page }) => {
   for (const url of ["/people/not-an-id", "/candidates/not-an-id", "/races/missing", "/bills/missing", "/places/missing", "/government/missing", "/sources/missing"]) {
     expect((await page.goto(url))?.status(), url).toBe(404);
+    await expect(page.getByRole("heading", { name: "Page not found" }), url).toBeVisible();
   }
 });
 
@@ -110,6 +114,18 @@ test("a delayed earlier search cannot replace newer results", async ({ page }) =
 test("invalid race filters explain the input rather than suggesting an outage", async ({ page }) => {
   await page.goto("/races?year=not-a-year");
   await expect(page.getByRole("alert").filter({ hasText: "Enter a valid" })).toBeVisible();
+});
+
+test("service errors give recovery options without reporting zero bills", async ({ page }) => {
+  await page.goto("/bills?q=service-unavailable");
+  await expect(page.getByRole("alert").filter({ hasText: "Bills are temporarily unavailable" })).toBeVisible();
+  await expect(page.getByText("0 bills.")).toHaveCount(0);
+
+  await page.goto("/races/service-unavailable");
+  await expect(page.getByRole("heading", { name: "Page temporarily unavailable" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await page.getByRole("link", { name: "Return to search" }).click();
+  await expect(page.getByRole("heading", { name: "Who represents you" })).toBeVisible();
 });
 
 test("race, bill, election and place navigation", async ({ page }) => {

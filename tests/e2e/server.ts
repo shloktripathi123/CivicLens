@@ -43,7 +43,15 @@ db.exec(`
 gradeSources(db);
 setExclusionRules(db, [...EXCLUSIONS]);
 
-buildApp(db).listen({ host: "127.0.0.1", port: 41941 }).catch((error: unknown) => {
+const app = buildApp(db);
+app.addHook("onRequest", async (request, reply) => {
+  const url = new URL(request.url, "http://127.0.0.1");
+  if (url.pathname === "/v1/races/service-unavailable" ||
+      (url.pathname === "/v1/bills" && url.searchParams.get("q") === "service-unavailable")) {
+    return reply.code(503).send({ error: "Test service unavailable" });
+  }
+});
+app.listen({ host: "127.0.0.1", port: 41941 }).catch((error: unknown) => {
   console.error(error);
   process.exitCode = 1;
 });
