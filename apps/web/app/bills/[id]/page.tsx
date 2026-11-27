@@ -17,7 +17,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   return (
     <article>
       <h1>{b.number}</h1>
-      <p className="lead">{b.title}</p>
+      <p className="lead">{b.title === b.number ? "Title not available here; see the source." : b.title}</p>
       <p><BillStatus status={b.status} isLaw={b.isLaw} />{b.chapter && <span className="chip">{b.chapter}</span>}</p>
       {b.status === "unknown" ? <p className="src">Check the source to determine whether this measure became law.</p> : !b.isLaw && <p className="src">This is not shown as enacted in our data. Check the source for its current status.</p>}
       <nav aria-label="Bill sections" className="src">

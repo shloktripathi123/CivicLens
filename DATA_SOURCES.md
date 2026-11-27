@@ -27,6 +27,12 @@ database.
 | `openstates-bills` | Open States makes no copyright claim, but its terms require users to respect third-party rights. The import stores state bill titles and latest-action text. Review the underlying state sources and applicable rights, or exclude the unverified material; the provider's statement alone does not clear all of it. |
 | `oregon-sos-voting-rules` | The app publishes its own rule-based notes and calculated dates using Oregon election information. The [Secretary of State site terms](https://sos.oregon.gov/Pages/terms-and-conditions.aspx) do not provide a general redistribution license; check the underlying rules and any copied wording before approving this source. |
 
+The deployment snapshot omits Open States photo URLs and copied bill titles and
+action descriptions pending review. It retains people, bill numbers,
+sponsorships, action dates, and links to Open States. Other rights issues,
+including Oregon voting notes, remain unresolved; these omissions do not
+constitute permission to publish the snapshot.
+
 Voteview, Wikipedia's governor roster, Oregon Legislature OData, and the curated
 local-government dataset are excluded by the deployment workflow. Excluding
 them does not resolve rights for the other included sources or external media.

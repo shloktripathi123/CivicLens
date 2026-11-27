@@ -39,7 +39,7 @@ async function page(key: string, juris: string, n: number): Promise<{ results: O
 }
 
 /** Imports sitting state legislators. Resumable via on-disk page cache. */
-export async function ingestOpenStates(db: DB, { includeOregon = false }: { includeOregon?: boolean } = {}): Promise<number> {
+export async function ingestOpenStates(db: DB, { includeOregon = false, omitPhotos = false }: { includeOregon?: boolean; omitPhotos?: boolean } = {}): Promise<number> {
   const key = process.env.OPENSTATES_API_KEY;
   if (!key) { console.warn("OPENSTATES_API_KEY not set; skipping state legislators."); return 0; }
   mkdirSync(CACHE, { recursive: true });
@@ -57,10 +57,10 @@ export async function ingestOpenStates(db: DB, { includeOregon = false }: { incl
   }
   const people = all.filter((p) => p.current_role && (includeOregon || !p.jurisdiction.id.includes("state:or/")));
   if (people.length < 500) { console.warn("Open States: only " + people.length + " people, skipping."); return 0; }
-  return loadOpenStatesPeople(db, people, new Date().toISOString().slice(0, 10));
+  return loadOpenStatesPeople(db, people, new Date().toISOString().slice(0, 10), { omitPhotos });
 }
 
-export function loadOpenStatesPeople(db: DB, people: OsPerson[], asOf: string): number {
+export function loadOpenStatesPeople(db: DB, people: OsPerson[], asOf: string, { omitPhotos = false }: { omitPhotos?: boolean } = {}): number {
   const insP = db.prepare("INSERT OR REPLACE INTO person (id,canonical_name,given,family,birth_date,gender,photo_url,status,source_id,as_of) VALUES (?,?,?,?,?,?,?,'current',?,?)");
   const insI = db.prepare("INSERT OR IGNORE INTO person_identifier (person_id,scheme,value) VALUES (?,?,?)");
   const insN = db.prepare("INSERT INTO person_name (person_id,name,name_norm,kind) VALUES (?,?,?,?)");
@@ -81,7 +81,7 @@ export function loadOpenStatesPeople(db: DB, people: OsPerson[], asOf: string): 
       const upper = p.current_role!.org_classification === "upper";
       const office = p.offices.find((o) => o.classification === "capitol") ?? p.offices[0];
       const name = p.name;
-      insP.run(id, name, p.given_name || null, p.family_name || null, p.birth_date || null, p.gender || null, p.image || null, SRC.id, asOf);
+      insP.run(id, name, p.given_name || null, p.family_name || null, p.birth_date || null, p.gender || null, omitPhotos ? null : p.image || null, SRC.id, asOf);
       insI.run(id, "openstates", p.id);
       insN.run(id, name, normalizeName(name), "legal");
       insT.run(id, p.jurisdiction.name + (upper ? " State Senate" : " Legislature (lower chamber)"), p.current_role!.title,

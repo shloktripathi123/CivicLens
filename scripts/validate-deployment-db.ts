@@ -17,6 +17,22 @@ try {
   for (const id of excludedSources) {
     if (sourceExists.get(id)) throw new Error(`Snapshot contains excluded source ${id}; use a fresh database with excluded sources skipped.`);
   }
+  const unverifiedChecks: Array<[string, string]> = [
+    ["Open States photos", "SELECT count(*) AS n FROM person WHERE source_id='openstates-people' AND photo_url IS NOT NULL"],
+    ["Open States bill descriptions", `SELECT count(*) AS n FROM bill WHERE source_id='openstates-bills'
+      AND (title <> number OR summary IS NOT NULL OR status_detail IS NOT NULL OR text_url IS NOT NULL OR chapter IS NOT NULL)`],
+    ["Open States bill action descriptions", `SELECT count(*) AS n FROM bill_action a JOIN bill b ON b.id=a.bill_id
+      WHERE (a.source_id='openstates-bills' OR b.source_id='openstates-bills')
+      AND a.text <> 'Action recorded; see source for details.'`],
+    ["Open States profile descriptions", `SELECT count(*) AS n FROM official_record r WHERE r.source_id='openstates-bills'
+      AND NOT EXISTS (SELECT 1 FROM bill b JOIN bill_sponsor s ON s.bill_id=b.id
+        WHERE b.source_id='openstates-bills' AND b.url=r.url AND s.person_id=r.person_id
+        AND r.title=b.number AND r.detail=s.role || ' · ' || b.session AND r.publisher='Open States')`],
+  ];
+  for (const [label, sql] of unverifiedChecks) {
+    const { n } = db.prepare(sql).get() as { n: number };
+    if (n) throw new Error(`Snapshot contains ${label}; use a fresh ingest with unverified content omitted.`);
+  }
   const checks: Array<[string, string, number]> = [
     ["people", "SELECT count(*) AS n FROM person", 1000],
     ["office terms", "SELECT count(*) AS n FROM office_term", 1000],

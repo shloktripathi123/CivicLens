@@ -26,6 +26,14 @@ test("Oregon voting dates distinguish the mailing range from unknown drop-site o
   await expect(request).toContainText("No request needed");
 });
 
+test("bills without cleared titles link to their source without duplicating the number", async ({ page }) => {
+  await page.goto("/bills?state=CA&q=AB%2099");
+  await expect(page.getByRole("link", { name: /AB 99 — AB 99/ })).toHaveCount(0);
+  await page.getByRole("link", { name: /AB 99/ }).click();
+  await expect(page.getByText("Title not available here; see the source.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "View the bill at its source" })).toHaveAttribute("href", "https://example.test/source-bill");
+});
+
 test("main navigation and representative detail pages render", async ({ page }) => {
   const pages = [
     ["/", "Who represents you"],

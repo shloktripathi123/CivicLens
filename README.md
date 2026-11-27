@@ -172,7 +172,12 @@ configured your repository's secrets or Cloudflare resources for you.
    curated local-government dataset. Governor and local-government coverage
    will be reduced; Open States can supply Oregon legislative records, and
    Census unified school districts remain available nationwide. Other sources
-   still require a rights review. Local ingestion
+   still require a rights review. The snapshot also omits Open States photo
+   URLs and bill titles and action descriptions, while retaining bill numbers,
+   sponsor links, action dates, and links to the source. Local ingestion retains
+   those fields by default; `OMIT_UNVERIFIED_CONTENT=1` omits them on import.
+   This option does not sanitize an existing database; deployment validation
+   rejects snapshots containing those unverified fields. Local ingestion
    retains its defaults unless `SKIP_VOTEVIEW=1` and
    `SKIP_UNREVIEWED_SOURCES=1` are set. These options do not remove existing
    records; use a fresh database. The deployment validator rejects databases

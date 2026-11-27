@@ -45,7 +45,7 @@ async function page(key: string, juris: string, n: number): Promise<{ results: O
 }
 
 /** Imports recent bills and links them to sponsoring legislators already in the database. */
-export async function ingestStateBills(db: DB, { includeOregon = false }: { includeOregon?: boolean } = {}): Promise<number> {
+export async function ingestStateBills(db: DB, { includeOregon = false, omitDescriptions = false }: { includeOregon?: boolean; omitDescriptions?: boolean } = {}): Promise<number> {
   const key = process.env.OPENSTATES_API_KEY;
   if (!key) { console.warn("OPENSTATES_API_KEY not set; skipping state bills."); return 0; }
   mkdirSync(CACHE, { recursive: true });
@@ -63,10 +63,10 @@ export async function ingestStateBills(db: DB, { includeOregon = false }: { incl
     }
   }
   if (!rows.length) return 0;
-  return loadStateBills(db, rows, new Date().toISOString().slice(0, 10));
+  return loadStateBills(db, rows, new Date().toISOString().slice(0, 10), { omitDescriptions });
 }
 
-export function loadStateBills(db: DB, rows: Array<{ state: string; bill: OsBill }>, asOf: string): number {
+export function loadStateBills(db: DB, rows: Array<{ state: string; bill: OsBill }>, asOf: string, { omitDescriptions = false }: { omitDescriptions?: boolean } = {}): number {
   const idMap = new Map<string, string>();
   for (const r of db.prepare("SELECT value, person_id FROM person_identifier WHERE scheme = 'openstates'").all() as Array<{ value: string; person_id: string }>) idMap.set(r.value, r.person_id);
   const billInsert = db.prepare(`INSERT INTO bill (id,jurisdiction,session,number,title,summary,status,status_detail,is_law,chapter,url,text_url,introduced_on,source_id,as_of)
@@ -82,22 +82,22 @@ export function loadStateBills(db: DB, rows: Array<{ state: string; bill: OsBill
     db.prepare("DELETE FROM official_record WHERE source_id = ?").run(SRC.id);
     let count = 0;
     for (const { state, bill: b } of rows) {
-      if (!b.id || !b.session || !b.identifier || !b.title || !b.openstates_url) {
+      if (!b.id || !b.session || !b.identifier || (!omitDescriptions && !b.title) || !b.openstates_url) {
         console.warn(`Open States: skipped incomplete bill in ${state}.`);
         continue;
       }
-      billInsert.run(b.id, state, b.session, b.identifier, b.title, b.latest_action_description || null,
+      billInsert.run(b.id, state, b.session, b.identifier, omitDescriptions ? b.identifier : b.title, omitDescriptions ? null : b.latest_action_description || null,
         b.openstates_url, b.first_action_date || null, SRC.id, asOf);
       db.prepare("DELETE FROM bill_sponsor WHERE bill_id = ?").run(b.id);
       db.prepare("DELETE FROM bill_action WHERE bill_id = ?").run(b.id);
       for (const s of b.sponsorships ?? []) {
         const pid = s.person ? idMap.get(s.person.id) : undefined;
         if (s.name) sponsorInsert.run(b.id, s.name, s.primary ? "Primary sponsor" : "Sponsor", SRC.id, asOf, pid ?? null);
-        if (pid) ins.run(pid, `${b.identifier}: ${b.title}`,
-          `${s.primary ? "Primary sponsor" : "Sponsor"} · ${b.session}` + (b.latest_action_description ? ` · Latest action: ${b.latest_action_description}` : ""),
+        if (pid) ins.run(pid, omitDescriptions ? b.identifier : `${b.identifier}: ${b.title}`,
+          `${s.primary ? "Primary sponsor" : "Sponsor"} · ${b.session}` + (!omitDescriptions && b.latest_action_description ? ` · Latest action: ${b.latest_action_description}` : ""),
           b.first_action_date || null, "Open States", b.openstates_url, SRC.id, asOf);
       }
-      if (b.latest_action_date && b.latest_action_description) actionInsert.run(b.id, b.latest_action_date, b.latest_action_description, SRC.id, asOf);
+      if (b.latest_action_date && (omitDescriptions || b.latest_action_description)) actionInsert.run(b.id, b.latest_action_date, omitDescriptions ? "Action recorded; see source for details." : b.latest_action_description, SRC.id, asOf);
       count++;
     }
     db.exec("COMMIT");
