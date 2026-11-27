@@ -33,6 +33,19 @@ them does not resolve rights for the other included sources or external media.
 Keep the workflow's rights confirmation and approval gate in place until the
 remaining issues are resolved; do not treat this review as permission to approve.
 
+Open States' [bulk data page](https://open.pluralpolicy.com/data/) says its data
+is provided under a public-domain dedication unless otherwise noted, while its
+[terms](https://open.pluralpolicy.com/tos/) require users not to infringe
+third-party rights. The dedication does not establish the rights of every
+linked photograph or scraped item. For legislative material, the Supreme Court
+discussed the government-edicts doctrine in
+[*Georgia v. Public.Resource.Org*](https://www.supremecourt.gov/opinions/19pdf/18-1150_7m58.pdf).
+[California Government Code section 10248.5](https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=10248.5&lawCode=GOV)
+also identifies certain publicly available Legislative Counsel information as
+public domain. Neither finding alone clears every state's bill titles, action
+descriptions, or photographs. Verify their origin and applicable rights before
+publication, or omit the unverified material.
+
 - [congress-legislators](https://github.com/unitedstates/congress-legislators):
   the project dedicates its data to the public domain under CC0 1.0.
 - [Congress photographs](https://github.com/unitedstates/images): the

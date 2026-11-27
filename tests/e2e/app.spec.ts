@@ -14,6 +14,18 @@ test("state voting page links to state-specific resources and marks unavailable 
   await expect(page.getByRole("alert").filter({ hasText: "valid 2-letter state or territory code" })).toBeVisible();
 });
 
+test("Oregon voting dates distinguish the mailing range from unknown drop-site openings", async ({ page }) => {
+  await page.goto("/elections?state=OR");
+  const mailing = page.locator("ul.windows > li").filter({ has: page.getByText("Ballots mailed to voters:", { exact: true }) });
+  await expect(mailing).toContainText("2099-10-14 to 2099-10-20");
+  await expect(mailing).toContainText("Different timelines apply");
+  const dropSite = page.locator("ul.windows > li").filter({ has: page.getByText("Drop boxes open:", { exact: true }) });
+  await expect(dropSite).toContainText("Date not available");
+  await expect(dropSite).not.toContainText("No request needed");
+  const request = page.locator("ul.windows > li").filter({ has: page.getByText("Mail-in ballot request window:", { exact: true }) });
+  await expect(request).toContainText("No request needed");
+});
+
 test("main navigation and representative detail pages render", async ({ page }) => {
   const pages = [
     ["/", "Who represents you"],

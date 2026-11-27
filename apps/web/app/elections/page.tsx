@@ -18,7 +18,7 @@ const WIN_LABEL: Record<string, string> = {
   registration_deadline: "Voter registration deadline", mail_ballot_request: "Mail-in ballot request window",
   mail_ballots_sent: "Ballots mailed to voters", dropbox_open: "Drop boxes open", dropbox_close: "Drop boxes close",
 };
-const winDate = (w: Win) => (w.startDate && w.endDate ? `${w.startDate} to ${w.endDate}` : w.startDate ? `From ${w.startDate}` : w.endDate ?? "No request needed");
+const winDate = (w: Win) => (w.startDate && w.endDate ? `${w.startDate} to ${w.endDate}` : w.startDate ? `From ${w.startDate}` : w.endDate ?? (w.kind === "mail_ballot_request" ? "No request needed" : "Date not available"));
 
 function ElectionBlock({ e }: { e: Election }) {
   return (
