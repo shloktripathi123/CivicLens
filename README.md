@@ -13,6 +13,16 @@ coverage notes explain where information comes from and what is missing.
 Civic Lens is not an official voter guide; confirm election details with your
 state election office.
 
+Open States ingestion can provide recent bills and legislators across the
+states, including Oregon when its separate OData feed is excluded. Its bill
+feed is limited by API access, rate limits, and the number of pages ingested;
+missing records do not mean no bills exist. Open States bill law status is
+shown as unverified, not guessed from a passage date. Open States does not
+provide term start dates in the current-role feed, so those dates are shown as
+not provided and year-filtered searches omit them. The Census unified
+school-district dataset covers all states, but does not include every kind of
+school district or local-government officeholder.
+
 ## Local development
 
 Requirements: Node.js 22.13 or later and npm. Ingestion downloads public data
@@ -151,9 +161,9 @@ configured your repository's secrets or Cloudflare resources for you.
    or redistribution rights; inspect ingestion logs and coverage. It excludes
    Voteview, Wikipedia's governor roster, Oregon Legislature OData, and the
    curated local-government dataset. Governor and local-government coverage
-   will be reduced; Oregon legislative records may still come from other
-   sources. School-district data from the local-government ingest is also
-   omitted. Other sources still require a rights review. Local ingestion
+   will be reduced; Open States can supply Oregon legislative records, and
+   Census unified school districts remain available nationwide. Other sources
+   still require a rights review. Local ingestion
    retains its defaults unless `SKIP_VOTEVIEW=1` and
    `SKIP_UNREVIEWED_SOURCES=1` are set. These options do not remove existing
    records; use a fresh database. The deployment validator rejects databases

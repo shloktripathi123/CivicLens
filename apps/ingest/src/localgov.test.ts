@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isoDate, parseTrimetBoard } from "./localgov.ts";
+import { openDb } from "@civic/db";
+import { isoDate, loadSchoolDistricts, parseTrimetBoard } from "./localgov.ts";
 
 const FIX = `<p>Previous text ends here. Dr. LaVerne Lewis President District 6: E Multnomah County View district map First appointed March 4, 2021 Term expires February 28, 2029 Committee Email x</p>
 <p>bio sentence. Thomas Kim Vice-President District 1: Washington County View district map First appointed July 1, 2021 Term expires June 30, 2029</p>
@@ -16,4 +17,20 @@ test("parses TriMet directors with titles and dates", () => {
 
 test("returns nothing when the page layout changes", () => {
   assert.equal(parseTrimetBoard("<html>nothing here</html>").length, 0);
+});
+
+test("Census unified districts can be loaded nationwide without curated local sources", () => {
+  const db = openDb(":memory:");
+  try {
+    db.prepare("INSERT INTO source(id,name,url,retrieved_at) VALUES('census-school-districts','Census','https://census.gov','2026-01-01')").run();
+    assert.equal(loadSchoolDistricts(db, [
+      { GEOID: "4101920", NAME: "Oregon District", USPS: "OR" },
+      { GEOID: "0600001", NAME: "California District", USPS: "CA" },
+    ]), 2);
+    const districts = db.prepare("SELECT state,as_of FROM gov_unit ORDER BY state").all();
+    assert.deepEqual(districts.map((r) => ({ ...r })), [{ state: "CA", as_of: "2024-01-01" }, { state: "OR", as_of: "2024-01-01" }]);
+    assert.equal(db.prepare("SELECT 1 FROM source WHERE id='local-gov-official'").get(), undefined);
+  } finally {
+    db.close();
+  }
 });

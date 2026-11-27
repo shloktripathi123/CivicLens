@@ -95,7 +95,7 @@ export function getDeepProfile(db: DatabaseSync, personId: string): DeepProfile 
     return { status: items.length ? "has_data" : "none_recorded", lookups: lk[section], items, checked: CHECKED[section] };
   };
 
-  const terms = db.prepare("SELECT body, title, party, start_date, end_date, source_id, as_of FROM office_term WHERE person_id = ? AND party IS NOT NULL ORDER BY start_date").all(personId) as Array<Record<string, string | null>>;
+  const terms = db.prepare("SELECT body, title, party, CASE WHEN start_date_known = 1 THEN start_date END AS start_date, end_date, source_id, as_of FROM office_term WHERE person_id = ? AND party IS NOT NULL ORDER BY start_date").all(personId) as Array<Record<string, string | null>>;
   const affiliations = terms.map((t) => ({
     title: t.party as string, detail: `${t.title}, ${t.body}`, date: t.start_date, publisher: null, url: null,
     provenance: prov(db, t.source_id as string, t.as_of as string),

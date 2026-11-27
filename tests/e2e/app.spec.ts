@@ -154,6 +154,22 @@ test("race, bill, election and place navigation", async ({ page }) => {
   await expect(page.getByText("Alex Example")).toBeVisible();
 });
 
+test("bills can be filtered outside Oregon without claiming an unverified law status", async ({ page }) => {
+  await page.goto("/bills");
+  await page.getByLabel("State (e.g. OR)").fill("CA");
+  await page.getByRole("button", { name: "Filter" }).click();
+  await expect(page.getByRole("link", { name: /HB 1000/ })).toHaveCount(0);
+  await page.getByRole("link", { name: /AB 20/ }).click();
+  await expect(page.getByRole("heading", { name: "AB 20" })).toBeVisible();
+  await expect(page.getByText("Law status not verified")).toBeVisible();
+  await expect(page.getByText("Check the source to determine whether this measure became law.")).toBeVisible();
+});
+
+test("state profiles show when the source did not provide a term start", async ({ page }) => {
+  await page.goto("/people/44444444-4444-4444-8444-444444444444");
+  await expect(page.getByText("Start not provided")).toBeVisible();
+});
+
 test("coverage links only to sources present in the database", async ({ page }) => {
   await page.goto("/rubric");
   await page.getByRole("link", { name: "Coverage and available sources" }).click();

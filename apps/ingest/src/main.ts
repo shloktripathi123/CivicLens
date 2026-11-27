@@ -33,7 +33,7 @@ async function main() {
   console.log(`Race calendar: ${ingestCalendar(db)} statutory races ensured.`);
   await ingestFec(db);
   await ingestPlaces(db);
-  if (!skipUnreviewed) console.log(`Local government: ${await ingestLocalGov(db)} school districts plus curated units.`);
+  console.log(`Local government: ${await ingestLocalGov(db, { skipCurated: skipUnreviewed })} Census unified school districts.`);
   console.log(`State election offices: ${await ingestVotingInfo(db)} linked.`);
   if (process.env.SKIP_VOTEVIEW === "1") {
     console.log("Voteview skipped; existing Voteview records are not removed.");
@@ -42,8 +42,8 @@ async function main() {
     console.log(`Voteview: ${v.votes} votes, ${v.scores} scores.`);
   }
   { const f = await ingestFederalRecords(db); console.log(`Federal: ${f.bills} bills, ${f.funding} funding rows.`); }
-  console.log(`Open States: ${await ingestOpenStates(db)} state legislators.`);
-  console.log(`Open States bills: ${await ingestStateBills(db)} sponsorship records.`);
+  console.log(`Open States: ${await ingestOpenStates(db, { includeOregon: skipUnreviewed })} state legislators.`);
+  console.log(`Open States bills: ${await ingestStateBills(db, { includeOregon: skipUnreviewed })} bills.`);
   console.warn("LegiScan ingest is unavailable: the adapter has not been implemented.");
   console.log(`Voting windows: ${seedVotingWindows(db)} seeded.`);
   backfillOfficeTypes(db);

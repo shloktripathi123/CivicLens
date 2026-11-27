@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS office_term (
   person_id TEXT NOT NULL REFERENCES person(id),
   level TEXT NOT NULL, branch TEXT NOT NULL, body TEXT NOT NULL, title TEXT NOT NULL,
   state TEXT, district TEXT, party TEXT, start_date TEXT NOT NULL, end_date TEXT,
+  start_date_known INTEGER NOT NULL DEFAULT 1,
   leadership_role TEXT, website TEXT, phone TEXT, address TEXT, contact_form TEXT,
   office_type TEXT, how_filled TEXT,
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL,
@@ -192,6 +193,14 @@ function migrate(db: DB) {
   for (const [name, type] of SOURCE_COLUMNS) if (!have.has(name)) db.exec(`ALTER TABLE source ADD COLUMN ${name} ${type}`);
   const haveTerm = new Set((db.prepare("PRAGMA table_info(office_term)").all() as Array<{ name: string }>).map((c) => c.name));
   for (const name of ["office_type", "how_filled"]) if (!haveTerm.has(name)) db.exec(`ALTER TABLE office_term ADD COLUMN ${name} TEXT`);
+  if (!haveTerm.has("start_date_known")) {
+    db.exec("BEGIN");
+    try {
+      db.exec("ALTER TABLE office_term ADD COLUMN start_date_known INTEGER NOT NULL DEFAULT 1");
+      db.exec("UPDATE office_term SET start_date_known = 0 WHERE source_id = 'openstates-people'");
+      db.exec("COMMIT");
+    } catch (e) { db.exec("ROLLBACK"); throw e; }
+  }
   backfillOfficeTypes(db);
 }
 
@@ -265,7 +274,7 @@ interface SummaryRow {
 
 const SUMMARY_SQL = `
 SELECT p.id, p.canonical_name, p.photo_url, p.status,
-       t.body, t.party, t.state, t.district, t.start_date, t.end_date, t.level
+       t.body, t.party, t.state, t.district, CASE WHEN t.start_date_known = 1 THEN t.start_date END AS start_date, t.end_date, t.level
 FROM person p
 LEFT JOIN office_term t ON t.id = (
   SELECT id FROM office_term WHERE person_id = p.id ORDER BY start_date DESC LIMIT 1
@@ -273,7 +282,7 @@ LEFT JOIN office_term t ON t.id = (
 
 function toSummary(db: DB, r: SummaryRow): PersonSummary {
   const first = db
-    .prepare("SELECT MIN(start_date) AS s FROM office_term WHERE person_id = ?")
+    .prepare("SELECT MIN(start_date) AS s FROM office_term WHERE person_id = ? AND start_date_known = 1")
     .get(r.id) as { s: string | null };
   const candidacy = latestCandidacy(db, r.id);
   const sought = candidacy
@@ -349,7 +358,7 @@ export function allPersonMeta(db: DB): PersonMeta[] {
               (SELECT body FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS body,
               (SELECT state FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS state,
               (SELECT party FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS party,
-              (SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id) AS startYear,
+              (SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id AND start_date_known=1) AS startYear,
               (SELECT MAX(substr(COALESCE(end_date,'9999'),1,4)) FROM office_term WHERE person_id=p.id) AS endYear,
               (SELECT group_concat(DISTINCT body) FROM office_term WHERE person_id=p.id) AS bodies,
               (SELECT group_concat(DISTINCT party) FROM office_term WHERE person_id=p.id) AS parties,
@@ -410,7 +419,7 @@ export function getSummaries(db: DB, ids: string[]): PersonSummary[] {
 
 export interface TermDto {
   title: string; body: string; level: string; branch: string; party: string | null;
-  state: string | null; district: string | null; start: string; end: string | null;
+  state: string | null; district: string | null; start: string | null; end: string | null;
   provenance: Provenance;
 }
 
@@ -422,12 +431,12 @@ function provFor(db: DB, sourceId: string, asOf: string): Provenance {
 
 export function getTimeline(db: DB, id: string): TermDto[] {
   const rows = db
-    .prepare("SELECT * FROM office_term WHERE person_id = ? ORDER BY start_date")
+    .prepare("SELECT *, CASE WHEN start_date_known = 1 THEN start_date END AS actual_start FROM office_term WHERE person_id = ? ORDER BY start_date")
     .all(id) as Array<Record<string, string | null>>;
   return rows.map((t) => ({
     title: t.title as string, body: t.body as string, level: t.level as string, branch: t.branch as string,
     party: t.party, state: t.state, district: t.district,
-    start: t.start_date as string, end: t.end_date,
+    start: t.actual_start, end: t.end_date,
     provenance: provFor(db, t.source_id as string, t.as_of as string),
   }));
 }
@@ -749,7 +758,7 @@ export function conflictsFor(db: DB, personId: string): Conflict[] {
 
 export interface BillRow {
   id: string; jurisdiction: string; session: string; number: string; title: string; summary: string | null;
-  status: string; statusDetail: string | null; isLaw: boolean; chapter: string | null; url: string; textUrl: string | null;
+  status: string; statusDetail: string | null; isLaw: boolean | null; chapter: string | null; url: string; textUrl: string | null;
   introducedOn: string | null; provenance: Provenance;
 }
 
@@ -757,7 +766,7 @@ function billRow(db: DB, r: Record<string, unknown>): BillRow {
   return {
     id: r.id as string, jurisdiction: r.jurisdiction as string, session: r.session as string, number: r.number as string,
     title: r.title as string, summary: (r.summary as string) ?? null, status: r.status as string,
-    statusDetail: (r.status_detail as string) ?? null, isLaw: r.is_law === 1, chapter: (r.chapter as string) ?? null,
+    statusDetail: (r.status_detail as string) ?? null, isLaw: r.status === "unknown" ? null : r.is_law === 1, chapter: (r.chapter as string) ?? null,
     url: r.url as string, textUrl: (r.text_url as string) ?? null, introducedOn: (r.introduced_on as string) ?? null,
     provenance: provFor(db, r.source_id as string, r.as_of as string),
   };

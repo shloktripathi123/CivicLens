@@ -14,7 +14,9 @@ provider terms and the rights for the particular material before reuse.
   makes no copyright claim over collected data; use of its services remains
   subject to its terms. Its [people repository](https://docs.openstates.org/contributing/people/)
   is explicitly dedicated under CC0. Do not assume that this CC0 dedication
-  automatically applies to every upstream third-party work or image.
+  automatically applies to every upstream third-party work or image. The
+  app imports recent bill titles, latest actions, and sponsor information as
+  well as legislator data; review the rights for the underlying material.
 - [Wikidata](https://www.wikidata.org/wiki/Wikidata:Data_access): structured
   data is generally CC0; linked media may have separate rights.
 - [Wikipedia](https://wikimediafoundation.org/what-we-do/wikimedia-projects/wikipedia/):
@@ -35,7 +37,8 @@ provider terms and the rights for the particular material before reuse.
   does not remove Voteview records already present in an existing database.
 - [U.S. Census Bureau](https://www.census.gov/about/policies/citation.html):
   cite the Census Bureau as the original data source. Verify rights for any
-  separately attributed third-party material.
+  separately attributed third-party material. The unified school-district
+  gazetteer represents districts as of January 1, 2024.
 - [FEC](https://www.fec.gov/updates/sale-or-use-contributor-information/):
   public availability does not eliminate restrictions on the sale or use of
   individual contributor information. Review the FEC's rules before using or

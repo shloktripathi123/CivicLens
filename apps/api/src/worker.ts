@@ -119,7 +119,7 @@ interface BillAsset {
   summary: string | null;
   status: string;
   statusDetail: string | null;
-  isLaw: boolean;
+  isLaw: boolean | null;
   chapter: string | null;
   url: string;
   textUrl: string | null;
@@ -372,7 +372,7 @@ function passesSnapshot(meta: SearchSnapshot["people"][string]["meta"], filters:
   if (party && !meta.parties.toLowerCase().includes(party)) return false;
   if (officeType && !meta.officeTypes.split(",").includes(officeType)) return false;
   if (role === "candidate" && !meta.candidate) return false;
-  if (role === "official" && meta.startYear === 9999) return false;
+  if (role === "official" && !meta.bodies) return false;
   if (filters.has("year") && (!Number.isInteger(year) || meta.startYear > year || (meta.endYear !== null && year > meta.endYear))) return false;
   if (filters.has("election_year") && meta.electionYear !== electionYear) return false;
   return true;

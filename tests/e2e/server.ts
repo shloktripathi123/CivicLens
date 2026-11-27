@@ -10,11 +10,14 @@ db.exec(`
   INSERT INTO person(id,canonical_name,given,family,status,source_id,as_of) VALUES
     ('11111111-1111-4111-8111-111111111111','Taylor Example','Taylor','Example','current','congress-legislators','2025-01-01'),
     ('22222222-2222-4222-8222-222222222222','Jordan Example','Jordan','Example','candidate','congress-legislators','2025-01-01'),
-    ('33333333-3333-4333-8333-333333333333','Morgan Example','Morgan','Example','candidate','congress-legislators','2025-01-01');
+    ('33333333-3333-4333-8333-333333333333','Morgan Example','Morgan','Example','candidate','congress-legislators','2025-01-01'),
+    ('44444444-4444-4444-8444-444444444444','Casey Stateholder','Casey','Stateholder','current','congress-legislators','2025-01-01');
   INSERT INTO person_name(person_id,name,name_norm,kind)
     SELECT id,canonical_name,lower(canonical_name),'canonical' FROM person;
   INSERT INTO office_term(person_id,level,branch,body,title,state,party,start_date,office_type,source_id,as_of)
     VALUES('11111111-1111-4111-8111-111111111111','state','legislative','Oregon Senate','State Senator','OR','Independent','2025-01-01','senate','congress-legislators','2025-01-01');
+  INSERT INTO office_term(person_id,level,branch,body,title,state,start_date,start_date_known,office_type,source_id,as_of)
+    VALUES('44444444-4444-4444-8444-444444444444','state','legislative','California Senate','State Senator','CA','2026-01-01',0,'senate','congress-legislators','2026-01-01');
   INSERT INTO office(id,level,body,jurisdiction,title,source_id,as_of) VALUES
     ('state-office','state','Oregon Senate','OR','State Senator','congress-legislators','2025-01-01'),
     ('federal-office','federal','U.S. Senate','OR','U.S. Senator','congress-legislators','2025-01-01');
@@ -38,7 +41,8 @@ db.exec(`
   INSERT INTO gov_area(place_id,unit_id,relation,source_id,as_of)
     VALUES('county:41001','example-gov','contains','congress-legislators','2025-01-01');
   INSERT INTO bill(id,jurisdiction,session,number,title,summary,status,is_law,url,source_id,as_of)
-    VALUES('example-bill','OR','2025','HB 1000','Example public records bill','A test bill.','introduced',0,'https://example.test/bill','congress-legislators','2025-01-01');
+    VALUES('example-bill','OR','2025','HB 1000','Example public records bill','A test bill.','introduced',0,'https://example.test/bill','congress-legislators','2025-01-01'),
+    ('ocd-bill/california','CA','2026','AB 20','California example bill',NULL,'unknown',0,'https://example.test/ca-bill','congress-legislators','2026-01-01');
 `);
 gradeSources(db);
 setExclusionRules(db, [...EXCLUSIONS]);

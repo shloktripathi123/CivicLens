@@ -216,7 +216,8 @@ test("Cloudflare API serves a location detail page with explicit government leve
 });
 
 test("Cloudflare API validates bill, race, and calendar filters", async () => {
-  assert.equal((await get("/v1/bills?status=unknown")).status, 400);
+  assert.equal((await get("/v1/bills?status=invalid")).status, 400);
+  assert.equal((await get("/v1/bills?status=unknown")).status, 200);
   assert.equal((await get("/v1/races?state=invalid")).status, 400);
   assert.equal((await get("/v1/calendar?state=invalid")).status, 400);
 });

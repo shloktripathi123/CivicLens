@@ -73,7 +73,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 <td>{t.title}<br /><span className="src">{t.body}</span></td>
                 <td>{t.state}{t.district ? ` · ${t.district}` : ""}</td>
                 <td>{t.party ?? <span className="na">Not available</span>}</td>
-                <td>{t.start.slice(0, 10)} → {t.end ? t.end.slice(0, 10) : "present"}</td>
+                <td>{t.start ? t.start.slice(0, 10) : "Start not provided"} → {t.end ? t.end.slice(0, 10) : "present"}</td>
               </tr>
             ))}
           </tbody>
