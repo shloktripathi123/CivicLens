@@ -11,6 +11,7 @@ export const SRC = {
 };
 const REG_URL = "https://sos.oregon.gov/voting/Pages/registration.aspx";
 const DROP_URL = "https://sos.oregon.gov/voting/Pages/drop-box-locator.aspx";
+const MAILING_RULE_URL = "https://www.oregonlegislature.gov/bills_laws/ors/ors254.html";
 
 const shift = (iso: string, days: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -31,10 +32,10 @@ export function oregonWindows(electionDate: string): WindowDef[] {
       note: "Last day to register or update your registration (21 days before the election)." },
     { kind: "mail_ballot_request", start: null, end: null, basis, url: REG_URL,
       note: "Oregon votes by mail: every registered voter is sent a ballot automatically, so there is no request window." },
-    { kind: "mail_ballots_sent", start: shift(electionDate, -18), end: shift(electionDate, -14), basis, url: REG_URL,
-      note: "Counties mail ballots between 18 and 14 days before the election." },
-    { kind: "dropbox_open", start: shift(electionDate, -18), end: null, basis, url: DROP_URL,
-      note: "Official drop sites can open once ballots are mailed; exact opening day varies by county." },
+    { kind: "mail_ballots_sent", start: shift(electionDate, -20), end: shift(electionDate, -14), basis, url: MAILING_RULE_URL,
+      note: "Counties generally mail ballots 20 to 14 days before the election. Different timelines apply to some voters; check with your county." },
+    { kind: "dropbox_open", start: null, end: null, basis, url: DROP_URL,
+      note: "Opening dates vary by county; check the official drop-site locator." },
     { kind: "dropbox_close", start: null, end: electionDate, basis, url: DROP_URL,
       note: "Drop sites close at 8:00 p.m. on election day. Ballots must be in a drop site by then." },
   ];

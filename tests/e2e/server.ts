@@ -3,6 +3,7 @@ import { STATES } from "@civic/domain";
 import { buildApp } from "../../apps/api/src/app.ts";
 import { EXCLUSIONS } from "../../apps/api/src/exclusions.ts";
 import { gradeSources } from "../../apps/ingest/src/sources.ts";
+import { seedVotingWindows } from "../../apps/ingest/src/votingwindows.ts";
 
 const db = openDb(":memory:");
 db.exec(`
@@ -88,6 +89,7 @@ for (let i = 1; i <= 65; i++) {
   }
   if (i <= 12) insertRecord.run(`Research bill ${number}`, `https://example.test/record/${number}`);
 }
+seedVotingWindows(db);
 gradeSources(db);
 setExclusionRules(db, [...EXCLUSIONS]);
 

@@ -2,6 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openDb } from "@civic/db";
 import { electionDay, ingestCalendar, nextFederalCycle } from "./calendar.ts";
+import { oregonWindows } from "./votingwindows.ts";
+
+test("Oregon ballot mailing range follows the general statutory window without guessing drop-site opening", () => {
+  const windows = oregonWindows("2026-11-03");
+  const mailing = windows.find((window) => window.kind === "mail_ballots_sent");
+  assert.equal(mailing?.start, "2026-10-14");
+  assert.equal(mailing?.end, "2026-10-20");
+  assert.match(mailing?.note ?? "", /Different timelines apply/);
+  const dropSite = windows.find((window) => window.kind === "dropbox_open");
+  assert.equal(dropSite?.start, null);
+  assert.equal(dropSite?.end, null);
+});
 
 test("federal cycles advance after election day", () => {
   assert.equal(nextFederalCycle("2026-11-03"), 2026);
