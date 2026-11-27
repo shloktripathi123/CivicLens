@@ -30,6 +30,10 @@ const GRADINGS: Record<string, Grading> = {
     type: "official federal directory of state election offices",
     criteria: { primaryRecord: 1, authorship: 2, editorial: 2, independence: 2, verifiability: 2, currency: 1 },
   },
+  "eac-state-voting-guides": {
+    type: "official federal directory of state voting information",
+    criteria: { primaryRecord: 1, authorship: 2, editorial: 2, independence: 2, verifiability: 2, currency: 1 },
+  },
   "wikidata": {
     type: "crowd-edited knowledge base",
     criteria: { primaryRecord: 0, authorship: 1, editorial: 1, independence: 2, verifiability: 1, currency: 1 },

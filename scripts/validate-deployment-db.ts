@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { uncitedFacts } from "@civic/db";
+import { STATES } from "@civic/domain";
 
 const path = process.argv[2];
 if (!path) throw new Error("Usage: node --import tsx scripts/validate-deployment-db.ts <database>");
@@ -34,6 +35,10 @@ try {
     if (n < minimum) throw new Error(`${label}: found ${n}, require at least ${minimum}`);
     console.log(`${label}: ${n}`);
   }
+  const guideExists = db.prepare("SELECT 1 FROM state_voting_guide WHERE state = ?");
+  const missingGuides = STATES.filter((state) => !guideExists.get(state.usps)).map((state) => state.usps);
+  if (missingGuides.length) throw new Error(`Missing EAC state voting guides: ${missingGuides.join(", ")}`);
+  console.log(`state voting guides: ${STATES.length}`);
   const { n: reports } = db.prepare("SELECT count(*) AS n FROM correction_report").get() as { n: number };
   if (reports !== 0) throw new Error("Snapshot contains correction reports; do not upload private submissions.");
   console.log("Snapshot checks passed. These minimums do not certify completeness or redistribution rights.");

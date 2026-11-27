@@ -234,7 +234,7 @@ export interface SourceRecord {
   license: string | null; attribution: string | null; retrievedAt: string; factCount: number;
 }
 
-const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "county_geography", "county_population", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "official_record", "voting_window", ...GOV_FACT_TABLES];
+const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "county_geography", "county_population", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "state_voting_guide", "official_record", "voting_window", ...GOV_FACT_TABLES];
 
 export function listSources(db: DB): SourceRecord[] {
   const rows = db.prepare("SELECT * FROM source ORDER BY name").all() as Array<Record<string, unknown>>;

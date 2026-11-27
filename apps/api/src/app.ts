@@ -11,7 +11,7 @@ import { buildPlacePage } from "./placePage.ts";
 import { districtsAt } from "./districts.ts";
 import { getPlaceRow, listSources, getSourceRecord, addReport, conflictsFor, linkStatus, hiddenTargets } from "@civic/db";
 import { EXCLUSIONS, reportTarget, sanitize } from "./exclusions.ts";
-import { BILL_STATUSES, isZip, RUBRIC_VERSION, CRITERIA, GRADE_MEANING, type PlaceType } from "@civic/domain";
+import { BILL_STATUSES, isZip, stateByUsps, RUBRIC_VERSION, CRITERIA, GRADE_MEANING, type PlaceType } from "@civic/domain";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -193,6 +193,7 @@ export function buildApp(db: DB = openDb()) {
   app.get<{ Querystring: { state?: string } }>("/v1/calendar", async (req, reply) => {
     const st = req.query.state;
     if (st !== undefined && !/^[A-Za-z]{2}$/.test(st)) return reply.code(400).send({ error: "state must be a 2-letter code" });
+    if (st !== undefined && !stateByUsps(st)) return reply.code(404).send({ error: "not found" });
     return buildCalendar(db, st);
   });
 

@@ -10,7 +10,7 @@ import { ingestRoster } from "./roster.ts";
 import { ingestFec } from "./fec.ts";
 import { ingestCountyFacts, ingestPlaces } from "./places.ts";
 import { ingestLocalGov } from "./localgov.ts";
-import { ingestVotingInfo } from "./votinginfo.ts";
+import { ingestVotingGuides, ingestVotingInfo } from "./votinginfo.ts";
 import { seedVotingWindows } from "./votingwindows.ts";
 import { ingestVoteview } from "./voteview.ts";
 import { ingestFederalRecords } from "./federal.ts";
@@ -36,6 +36,7 @@ async function main() {
   await ingestCountyFacts(db);
   console.log(`Local government: ${await ingestLocalGov(db, { skipCurated: skipUnreviewed })} Census unified school districts.`);
   console.log(`State election offices: ${await ingestVotingInfo(db)} linked.`);
+  console.log(`State voting guides: ${await ingestVotingGuides(db)} linked.`);
   if (process.env.SKIP_VOTEVIEW === "1") {
     console.log("Voteview skipped; existing Voteview records are not removed.");
   } else {

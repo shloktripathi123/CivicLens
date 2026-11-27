@@ -3,6 +3,17 @@ import { expect, test } from "@playwright/test";
 const official = "11111111-1111-4111-8111-111111111111";
 const candidate = "22222222-2222-4222-8222-222222222222";
 
+test("state voting page links to state-specific resources and marks unavailable dates", async ({ page }) => {
+  await page.goto("/elections?state=CA");
+  await expect(page.getByRole("link", { name: "Voter registration information (Vote.gov)" })).toHaveAttribute("href", "https://vote.gov/register/california");
+  await expect(page.getByRole("link", { name: "State voting guide (U.S. Election Assistance Commission)" })).toHaveAttribute("href", /field_state_target_id=18176$/);
+  await expect(page.getByText(/Registration deadlines except any listed below: not in our data/)).toBeVisible();
+  await page.goto("/elections?state=ND");
+  await expect(page.getByRole("link", { name: "Voter registration information (Vote.gov)" })).toHaveAttribute("href", "https://vote.gov/register/north-dakota");
+  await page.goto("/elections?state=XX");
+  await expect(page.getByRole("alert").filter({ hasText: "valid 2-letter state or territory code" })).toBeVisible();
+});
+
 test("main navigation and representative detail pages render", async ({ page }) => {
   const pages = [
     ["/", "Who represents you"],

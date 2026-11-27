@@ -7,6 +7,8 @@ const db = openDb(":memory:");
 db.exec(`
   INSERT INTO source(id,name,url,retrieved_at,authoritative)
     VALUES('congress-legislators','Test records','https://example.test/records','2025-01-01',1);
+  INSERT INTO state_voting_guide(state,url,source_id,as_of) VALUES
+    ('CA','https://www.eac.gov/voters/register-and-vote-in-your-state?field_state_target_id=18176','congress-legislators','2026-01-01');
   INSERT INTO person(id,canonical_name,given,family,status,source_id,as_of) VALUES
     ('11111111-1111-4111-8111-111111111111','Taylor Example','Taylor','Example','current','congress-legislators','2025-01-01'),
     ('22222222-2222-4222-8222-222222222222','Jordan Example','Jordan','Example','candidate','congress-legislators','2025-01-01'),

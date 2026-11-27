@@ -28,7 +28,7 @@ test("Oregon deadlines are rule-derived and labelled; other states declare the g
   assert.equal(by.registration_deadline.endDate, "2026-10-13");
   assert.equal(by.dropbox_close.endDate, "2026-11-03");
   assert.ok(w.every((x) => /confirm/i.test(x.basis) && x.url.startsWith("https://")));
-  assert.ok(!c.notInOurData.some((n) => /^Registration deadlines/.test(n)));
+  assert.ok(c.notInOurData.some((n) => /Registration deadlines except any listed below/.test(n)));
   const mi = buildCalendar(db, "MI", new Date("2026-10-12"));
   assert.ok(mi.upcoming.every((e) => e.windows.length === 0));
   assert.ok(mi.notInOurData.some((n) => /Registration deadlines/.test(n)));

@@ -7,7 +7,7 @@ interface Win { id: number; kind: string; startDate: string | null; endDate: str
 interface Election { windows?: Win[]; id: string; date: string; type: string; jurisdiction: string; labelText: string; contests: Contest[]; asOf: string }
 interface Calendar {
   today: string; state: string | null; upcoming: Election[]; past: Election[];
-  voterInfo: { stateOffice: { name: string; url: string; asOf: string } | null; registerUrl: string; personalBallot: string };
+  voterInfo: { stateOffice: { name: string; url: string; asOf: string } | null; votingGuide: { url: string; asOf: string } | null; registerUrl: string; personalBallot: string };
   notInOurData: string[]; coverage: string;
 }
 
@@ -62,14 +62,15 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
         <label>State (e.g. OR)<input name="state" maxLength={2} defaultValue={state} /></label>
         <button type="submit">Show</button>
       </form>
-      {!cal && <p className="empty" role="alert">{res?.status === 400 ? "Enter a 2-letter state code." : "The calendar is unavailable right now."}</p>}
+      {!cal && <p className="empty" role="alert">{res?.status === 400 || res?.status === 404 ? "Enter a valid 2-letter state or territory code." : "The calendar is unavailable right now."}</p>}
       {cal && (
         <>
           <section className="block" aria-labelledby="how-h">
             <h2 id="how-h">Register and vote{cal.state ? ` in ${cal.state}` : ""}</h2>
             <p className="src">Three kinds of information appear here and are never mixed: a scheduled date, a confirmed contest with filed candidates, and your personal ballot, which we do not generate.</p>
             <ul className="plain">
-              <li><a href={cal.voterInfo.registerUrl}>Register to vote (USA.gov)</a></li>
+              <li><a href={cal.voterInfo.registerUrl}>Voter registration information (Vote.gov)</a></li>
+              {cal.voterInfo.votingGuide && <li><a href={cal.voterInfo.votingGuide.url}>State voting guide (U.S. Election Assistance Commission)</a> <span className="meta">· Directory link checked {cal.voterInfo.votingGuide.asOf}. Find local election offices, voting options and registration information; verify deadlines with state or local officials.</span></li>}
               {cal.voterInfo.stateOffice
                 ? <li><a href={cal.voterInfo.stateOffice.url}>{cal.voterInfo.stateOffice.name} official election office</a> <span className="meta">· USA.gov directory, as of {cal.voterInfo.stateOffice.asOf}. Use it for your sample ballot, voter lookup and deadlines.</span></li>
                 : <li className="meta">Choose a state to see its official election office.</li>}
