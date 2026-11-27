@@ -28,6 +28,26 @@ test("imports legislators from Oregon and other states without guessing their te
   }
 });
 
+test("publication ingest omits Open States photos but retains legislator records", () => {
+  const db = openDb(":memory:");
+  try {
+    db.prepare("INSERT INTO source(id,name,url,retrieved_at) VALUES('openstates-people','Open States','https://openstates.org/','2026-01-01')").run();
+    const person: OsPerson = {
+      id: "ocd-person/example", name: "Example", given_name: "", family_name: "", party: "Independent",
+      image: "https://example.test/portrait.jpg", email: "", gender: "", birth_date: "",
+      current_role: { title: "Senator", org_classification: "upper", district: "1" },
+      jurisdiction: { id: "ocd-jurisdiction/country:us/state:or/government", name: "Oregon" },
+      openstates_url: "https://openstates.org/example", links: [], offices: [],
+    };
+    loadOpenStatesPeople(db, [person], "2026-11-26", { omitPhotos: true });
+    const row = db.prepare("SELECT canonical_name, photo_url FROM person").get();
+    assert.deepEqual({ ...row }, { canonical_name: "Example", photo_url: null });
+    assert.equal((db.prepare("SELECT count(*) AS n FROM office_term").get() as { n: number }).n, 1);
+  } finally {
+    db.close();
+  }
+});
+
 test("officials without a sourced start date remain searchable without inventing a term year", () => {
   const db = openDb(":memory:");
   try {

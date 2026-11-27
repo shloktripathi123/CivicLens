@@ -47,7 +47,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
           <li key={b.id}>
             <a className="card" href={`/bills/${encodeURIComponent(b.id)}`}>
               <span>
-                <span className="name">{b.number} — {b.title}</span>
+                <span className="name">{b.number}{b.title !== b.number && ` — ${b.title}`}</span>
                 <BillStatus status={b.status} isLaw={b.isLaw} />
                 <span className="chip">{b.jurisdiction}</span>
                 <span className="chip">{b.session}</span>

@@ -40,6 +40,7 @@ jobs:
           OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
           SKIP_VOTEVIEW: "1"
           SKIP_UNREVIEWED_SOURCES: "1"
+          OMIT_UNVERIFIED_CONTENT: "1"
         run: |
           if [ -z "$CONGRESS_API_KEY" ] || [ -z "$FEC_API_KEY" ] || [ -z "$OPENSTATES_API_KEY" ]; then
             echo "::error::CONGRESS_API_KEY, FEC_API_KEY and OPENSTATES_API_KEY are required for a deployment snapshot."

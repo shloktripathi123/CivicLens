@@ -51,6 +51,38 @@ test("imports bills across states even without a matched sponsor and keeps law s
   }
 });
 
+test("publication ingest retains bill identifiers, sponsors, dates and links without copied descriptions", () => {
+  const db = openDb(":memory:");
+  try {
+    db.exec(`
+      INSERT INTO source(id,name,url,retrieved_at,grade) VALUES('openstates-bills','Open States','https://openstates.org/','2026-01-01','B');
+      INSERT INTO person(id,canonical_name,status,source_id,as_of) VALUES('p','Example','current','openstates-bills','2026-01-01');
+      INSERT INTO person_identifier(person_id,scheme,value) VALUES('p','openstates','ocd-person/1');
+    `);
+    const bill: OsBill = {
+      id: "ocd-bill/or", session: "2026", identifier: "HB 1", title: "Unverified title",
+      openstates_url: "https://openstates.org/bill", first_action_date: "2026-01-01",
+      latest_action_date: "2026-02-01", latest_action_description: "Unverified action",
+      sponsorships: [{ name: "Example", primary: true, person: { id: "ocd-person/1" } }],
+    };
+    const rows = [{ state: "OR", bill }];
+    loadStateBills(db, rows, "2026-02-02", { omitDescriptions: true });
+    loadStateBills(db, rows, "2026-02-03", { omitDescriptions: true });
+    const result = getBill(db, bill.id);
+    assert.equal(result?.title, "HB 1");
+    assert.equal(result?.statusDetail, null);
+    assert.equal(result?.url, bill.openstates_url);
+    assert.deepEqual(result?.sponsors.map((s) => s.name), ["Example"]);
+    assert.deepEqual(result?.actions.map((a) => [a.date, a.text]), [["2026-02-01", "Action recorded; see source for details."]]);
+    const record = getDeepProfile(db, "p").sections.bills.items[0];
+    assert.equal(record.title, "HB 1");
+    assert.equal(record.detail, "Primary sponsor · 2026");
+    assert.equal(record.billId, bill.id);
+  } finally {
+    db.close();
+  }
+});
+
 test("existing bill sponsors survive the person-link migration", () => {
   const dir = mkdtempSync(join(tmpdir(), "civic-sponsors-test-"));
   const path = join(dir, "snapshot.db");

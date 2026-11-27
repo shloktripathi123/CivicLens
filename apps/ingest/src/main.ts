@@ -21,6 +21,7 @@ import { gradeSources } from "./sources.ts";
 async function main() {
   const db = openDb();
   const skipUnreviewed = process.env.SKIP_UNREVIEWED_SOURCES === "1";
+  const omitUnverifiedContent = process.env.OMIT_UNVERIFIED_CONTENT === "1";
   await ingest(db);
   await ingestExecutive(db);
   await ingestRoster(db, { skipWikipedia: skipUnreviewed });
@@ -44,8 +45,8 @@ async function main() {
     console.log(`Voteview: ${v.votes} votes, ${v.scores} scores.`);
   }
   { const f = await ingestFederalRecords(db); console.log(`Federal: ${f.bills} bills, ${f.funding} funding rows.`); }
-  console.log(`Open States: ${await ingestOpenStates(db, { includeOregon: skipUnreviewed })} state legislators.`);
-  console.log(`Open States bills: ${await ingestStateBills(db, { includeOregon: skipUnreviewed })} bills.`);
+  console.log(`Open States: ${await ingestOpenStates(db, { includeOregon: skipUnreviewed, omitPhotos: omitUnverifiedContent })} state legislators.`);
+  console.log(`Open States bills: ${await ingestStateBills(db, { includeOregon: skipUnreviewed, omitDescriptions: omitUnverifiedContent })} bills.`);
   console.warn("LegiScan ingest is unavailable: the adapter has not been implemented.");
   console.log(`Voting windows: ${seedVotingWindows(db)} seeded.`);
   backfillOfficeTypes(db);
