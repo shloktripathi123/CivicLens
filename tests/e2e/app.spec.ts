@@ -198,6 +198,24 @@ test("profiles explain gaps when voting records are unavailable", async ({ page 
   await expect(page.getByText(/No recorded history in our data for recorded floor votes/)).toBeVisible();
 });
 
+test("candidate and bill pages show sourced records without inventing votes or impacts", async ({ page, request }) => {
+  const response = await request.get(`http://127.0.0.1:41941/v1/candidates/${candidate}`);
+  const profile = await response.json();
+  expect(profile.deep.sections.bills.items[0].title).toContain("HB 1000");
+  expect(profile.deep.sections.bills.items[0].billId).toBe("example-bill");
+  expect(profile.deep.sections.votes.status).toBe("none_recorded");
+  await page.goto(`/candidates/${candidate}`);
+  await expect(page.getByRole("link", { name: "HB 1000: Example public records bill" })).toHaveAttribute("href", "/bills/example-bill");
+  await expect(page.getByText("Bills: partial")).toBeVisible();
+  await expect(page.getByText(/Sponsorship does not by itself mean a bill passed/)).toBeVisible();
+  await page.locator("summary").filter({ hasText: "Floor votes" }).click();
+  await expect(page.getByText(/No recorded history in our data for recorded floor votes/)).toBeVisible();
+  await page.goto("/bills/example-bill");
+  await expect(page.getByRole("link", { name: "Jordan Example" })).toHaveAttribute("href", `/people/${candidate}`);
+  await expect(page.getByText("Unmatched Sponsor")).toBeVisible();
+  await expect(page.getByText(/do not necessarily|not necessarily its final effects/)).toBeVisible();
+});
+
 test("credibility dialog handles success and service errors", async ({ page }) => {
   await page.goto(`/people/${official}`);
   const badge = page.getByRole("button", { name: /Source credibility/ }).first();

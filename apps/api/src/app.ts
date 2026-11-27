@@ -86,7 +86,7 @@ export function buildApp(db: DB = openDb()) {
   app.get<{ Params: { id: string } }>("/v1/candidates/:id", async (req, reply) => {
     if (!UUID.test(req.params.id)) return reply.code(404).send({ error: "not found" });
     const c = getCandidate(db, req.params.id);
-    return c ? { ...c, conflicts: conflictsFor(db, req.params.id) } : reply.code(404).send({ error: "not found" });
+    return c ? { ...c, deep: getDeepProfile(db, req.params.id), conflicts: conflictsFor(db, req.params.id) } : reply.code(404).send({ error: "not found" });
   });
 
   app.get<{ Querystring: { jurisdiction?: string; status?: string; q?: string; limit?: string; offset?: string } }>("/v1/bills", async (req, reply) => {

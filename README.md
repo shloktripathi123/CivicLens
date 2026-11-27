@@ -25,6 +25,10 @@ school district or local-government officeholder.
 County pages show Census 2024 land and water area and, where available, a
 July 2024 population estimate. These are historical figures, not current
 counts. County officials, elections and meetings remain incomplete.
+Candidate pages show available sourced sponsorship and voting records, not an
+endorsement or a complete voting history. State bill sponsors are linked to
+profiles only when Open States provides a matching person identifier. Bill
+summaries describe proposals; they do not establish measured impacts.
 
 ## Local development
 

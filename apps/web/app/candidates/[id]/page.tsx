@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Conflict from "@/components/Conflict";
 import Cite from "@/components/Cite";
+import { RecordSections } from "@/components/DeepRecord";
 import { API_URL, STATUS_LABEL, describe, usd, type CandidateProfile, type Provenance } from "@/lib/api";
 
 async function load(id: string): Promise<CandidateProfile | null> {
@@ -43,7 +44,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
         <div>
           <h1>{person.name}</h1>
           <p className="lead">
-            Candidate for {candidacy.office} · {candidacy.electionYear} general election ({candidacy.electionDate})
+            Candidate for {candidacy.office} · {candidacy.electionYear} {race.electionType} election ({candidacy.electionDate})
           </p>
           <p>
             <span className="chip">{candidacy.party ?? "Party not available"}</span>
@@ -59,7 +60,10 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
       <section className="block" aria-labelledby="cov">
         <h2 id="cov">Data coverage</h2>
         <ul className="cov">
-          {SHOWN.map((k) => <li key={k} className={coverage[k] ?? "unavailable"}>{LABELS[k]}: {coverage[k] ?? "unavailable"}</li>)}
+          {SHOWN.map((k) => {
+            const status = (k === "bills" || k === "votes") && p.deep?.sections[k].status === "has_data" ? "partial" : coverage[k] ?? "unavailable";
+            return <li key={k} className={status}>{LABELS[k]}: {status}</li>;
+          })}
         </ul>
       </section>
 
@@ -141,7 +145,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
             <Src p={record.terms[0].provenance} />
           </>
         ) : <p className="na">No offices held are in our data yet (state and local history is still being added).</p>}
-        <p className="na">Bills and votes: not available yet.</p>
+        <RecordSections deep={p.deep} person={person} sections={["bills", "votes"]} />
       </section>
 
       <section className="block" aria-labelledby="money">

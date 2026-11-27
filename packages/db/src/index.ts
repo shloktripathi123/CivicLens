@@ -163,9 +163,11 @@ CREATE TABLE IF NOT EXISTS bill (
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_bill_status ON bill(jurisdiction, status);
+CREATE INDEX IF NOT EXISTS idx_bill_source_url ON bill(source_id, url);
 CREATE TABLE IF NOT EXISTS bill_sponsor (
   bill_id TEXT NOT NULL REFERENCES bill(id), name TEXT NOT NULL, role TEXT NOT NULL,
-  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL,
+  person_id TEXT REFERENCES person(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_bill_sponsor ON bill_sponsor(bill_id);
 CREATE TABLE IF NOT EXISTS bill_action (
@@ -201,6 +203,8 @@ const SOURCE_COLUMNS: Array<[string, string]> = [
 function migrate(db: DB) {
   const have = new Set((db.prepare("PRAGMA table_info(source)").all() as Array<{ name: string }>).map((c) => c.name));
   for (const [name, type] of SOURCE_COLUMNS) if (!have.has(name)) db.exec(`ALTER TABLE source ADD COLUMN ${name} ${type}`);
+  const haveSponsor = new Set((db.prepare("PRAGMA table_info(bill_sponsor)").all() as Array<{ name: string }>).map((c) => c.name));
+  if (!haveSponsor.has("person_id")) db.exec("ALTER TABLE bill_sponsor ADD COLUMN person_id TEXT REFERENCES person(id) ON DELETE SET NULL");
   const haveTerm = new Set((db.prepare("PRAGMA table_info(office_term)").all() as Array<{ name: string }>).map((c) => c.name));
   for (const name of ["office_type", "how_filled"]) if (!haveTerm.has(name)) db.exec(`ALTER TABLE office_term ADD COLUMN ${name} TEXT`);
   if (!haveTerm.has("start_date_known")) {
@@ -832,7 +836,7 @@ export function listBills(db: DB, f: { jurisdiction?: string; status?: string; q
 export function getBill(db: DB, id: string) {
   const r = db.prepare("SELECT * FROM bill WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   if (!r) return null;
-  const sponsors = db.prepare("SELECT name, role FROM bill_sponsor WHERE bill_id = ? ORDER BY role, name").all(id) as Array<{ name: string; role: string }>;
+  const sponsors = db.prepare("SELECT name, role, person_id AS personId FROM bill_sponsor WHERE bill_id = ? ORDER BY role, name").all(id) as Array<{ name: string; role: string; personId: string | null }>;
   const actions = db.prepare("SELECT date, chamber, text FROM bill_action WHERE bill_id = ? ORDER BY date, rowid").all(id) as Array<{ date: string; chamber: string | null; text: string }>;
   return { ...billRow(db, r), sponsors, actions };
 }

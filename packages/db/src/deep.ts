@@ -24,6 +24,7 @@ export type DeepSection = (typeof DEEP_SECTIONS)[number];
 
 export interface DeepItem {
   title: string; detail: string | null; date: string | null; publisher: string | null; url: string | null;
+  billId?: string | null;
   provenance: { sourceId: string; sourceName: string; sourceUrl: string; asOf: string; grade: string | null; selfReported: boolean };
 }
 export interface DeepLookup { label: string; url: string }
@@ -85,12 +86,19 @@ export function getDeepProfile(db: DatabaseSync, personId: string): DeepProfile 
   for (const r of db.prepare("SELECT scheme, value FROM person_identifier WHERE person_id = ?").all(personId) as Array<{ scheme: string; value: string }>) ids[r.scheme] ??= r.value;
   const nm = (db.prepare("SELECT canonical_name AS n FROM person WHERE id = ?").get(personId) as { n: string } | undefined)?.n ?? "";
   const lk = lookupsFor(ids, nm);
+  const billByUrl = db.prepare("SELECT id FROM bill WHERE source_id = ? AND url = ? LIMIT 2");
   const slot = (section: keyof DeepProfile["sections"], extra: DeepItem[] = []): DeepSlot => {
     const items = [
       ...extra,
-      ...rows.filter((r) => r.section === section).map((r) => ({
-        title: r.title, detail: r.detail, date: r.date, publisher: r.publisher, url: r.url, provenance: prov(db, r.source_id, r.as_of),
-      })),
+      ...rows.filter((r) => r.section === section).map((r) => {
+        const bills = section === "bills" && r.url
+          ? billByUrl.all(r.source_id, r.url) as Array<{ id: string }> : [];
+        return {
+          title: r.title, detail: r.detail, date: r.date, publisher: r.publisher, url: r.url,
+          billId: bills.length === 1 ? bills[0].id : null,
+          provenance: prov(db, r.source_id, r.as_of),
+        };
+      }),
     ];
     return { status: items.length ? "has_data" : "none_recorded", lookups: lk[section], items, checked: CHECKED[section] };
   };

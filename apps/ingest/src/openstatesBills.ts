@@ -74,7 +74,7 @@ export function loadStateBills(db: DB, rows: Array<{ state: string; bill: OsBill
     ON CONFLICT(id) DO UPDATE SET jurisdiction=excluded.jurisdiction,session=excluded.session,number=excluded.number,
     title=excluded.title,status=excluded.status,status_detail=excluded.status_detail,is_law=0,url=excluded.url,
     introduced_on=excluded.introduced_on,source_id=excluded.source_id,as_of=excluded.as_of`);
-  const sponsorInsert = db.prepare("INSERT INTO bill_sponsor (bill_id,name,role,source_id,as_of) VALUES (?,?,?,?,?)");
+  const sponsorInsert = db.prepare("INSERT INTO bill_sponsor (bill_id,name,role,source_id,as_of,person_id) VALUES (?,?,?,?,?,?)");
   const actionInsert = db.prepare("INSERT INTO bill_action (bill_id,date,chamber,text,source_id,as_of) VALUES (?,?,NULL,?,?,?)");
   const ins = db.prepare("INSERT INTO official_record (person_id,section,title,detail,date,publisher,url,source_id,as_of) VALUES (?,'bills',?,?,?,?,?,?,?)");
   db.exec("BEGIN");
@@ -91,8 +91,8 @@ export function loadStateBills(db: DB, rows: Array<{ state: string; bill: OsBill
       db.prepare("DELETE FROM bill_sponsor WHERE bill_id = ?").run(b.id);
       db.prepare("DELETE FROM bill_action WHERE bill_id = ?").run(b.id);
       for (const s of b.sponsorships ?? []) {
-        if (s.name) sponsorInsert.run(b.id, s.name, s.primary ? "Primary sponsor" : "Sponsor", SRC.id, asOf);
         const pid = s.person ? idMap.get(s.person.id) : undefined;
+        if (s.name) sponsorInsert.run(b.id, s.name, s.primary ? "Primary sponsor" : "Sponsor", SRC.id, asOf, pid ?? null);
         if (pid) ins.run(pid, `${b.identifier}: ${b.title}`,
           `${s.primary ? "Primary sponsor" : "Sponsor"} · ${b.session}` + (b.latest_action_description ? ` · Latest action: ${b.latest_action_description}` : ""),
           b.first_action_date || null, "Open States", b.openstates_url, SRC.id, asOf);

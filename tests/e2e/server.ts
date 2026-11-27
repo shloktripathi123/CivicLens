@@ -49,6 +49,11 @@ db.exec(`
   INSERT INTO bill(id,jurisdiction,session,number,title,summary,status,is_law,url,source_id,as_of)
     VALUES('example-bill','OR','2025','HB 1000','Example public records bill','A test bill.','introduced',0,'https://example.test/bill','congress-legislators','2025-01-01'),
     ('ocd-bill/california','CA','2026','AB 20','California example bill',NULL,'unknown',0,'https://example.test/ca-bill','congress-legislators','2026-01-01');
+  INSERT INTO bill_sponsor(bill_id,name,role,source_id,as_of,person_id) VALUES
+    ('example-bill','Jordan Example','Primary sponsor','congress-legislators','2025-01-01','22222222-2222-4222-8222-222222222222'),
+    ('example-bill','Unmatched Sponsor','Sponsor','congress-legislators','2025-01-01',NULL);
+  INSERT INTO official_record(person_id,section,title,detail,date,publisher,url,source_id,as_of)
+    VALUES('22222222-2222-4222-8222-222222222222','bills','HB 1000: Example public records bill','Primary sponsor','2025-01-01','Test records','https://example.test/bill','congress-legislators','2025-01-01');
 `);
 gradeSources(db);
 setExclusionRules(db, [...EXCLUSIONS]);

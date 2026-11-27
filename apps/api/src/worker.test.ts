@@ -64,6 +64,10 @@ const race = {
   candidates: [],
 };
 const personProfile = { person: { id: personId, name: "Ron Wyden" }, terms: [] };
+const candidateProfile = {
+  person: { id: personId, name: "Ron Wyden" },
+  deep: { sections: { bills: { status: "has_data", items: [{ title: "Test bill" }] }, votes: { status: "none_recorded", items: [] } } },
+};
 const governmentUnit = {
   id: "gu:county:MA:25025",
   kind: "county",
@@ -165,7 +169,7 @@ function mockEnv(hidden: string[] = []) {
         if (path.endsWith(`/profile-data-${personId.slice(0, 2)}.json.gz`)) {
           return new Response(gzipSync(Buffer.from(JSON.stringify({
             profiles: { [personId]: personProfile },
-            candidates: {},
+            candidates: { [personId]: candidateProfile },
             timelines: { [personId]: personTimeline },
           }))));
         }
@@ -249,6 +253,9 @@ test("Cloudflare API serves profiles, races, and election calendars from static 
   const timeline = await get(`/v1/people/${personId}/timeline`);
   assert.equal(timeline.status, 200);
   assert.deepEqual(await timeline.json(), personTimeline);
+  const candidate = await get(`/v1/candidates/${personId}`);
+  assert.equal(candidate.status, 200);
+  assert.deepEqual(await candidate.json(), candidateProfile);
 
   const raceList = await get("/v1/races?state=OR&year=2026");
   assert.equal(raceList.status, 200);

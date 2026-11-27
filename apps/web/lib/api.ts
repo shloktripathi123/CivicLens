@@ -18,6 +18,7 @@ export interface Term {
 }
 export interface DeepItem {
   title: string; detail: string | null; date: string | null; publisher: string | null; url: string | null; provenance: Provenance;
+  billId?: string | null;
 }
 export interface DeepSlot { lookups?: Array<{ label: string; url: string }>; status: "has_data" | "none_recorded"; items: DeepItem[]; checked: string }
 export type DeepKey = "affiliations" | "bills" | "votes" | "projects" | "funding" | "ratings";
@@ -51,6 +52,7 @@ export interface Race {
   status: string; ordering: string; candidates: RaceCandidate[];
 }
 export interface CandidateProfile {
+  deep?: DeepProfile | null;
   conflicts?: import("@/components/Conflict").ConflictDto[];
   person: Person;
   candidacy: Candidacy & { website: string | null; filedOn: string | null; provenance: Provenance };
@@ -101,7 +103,7 @@ export interface Bill {
   introducedOn: string | null; provenance: Provenance;
 }
 export interface BillDetail extends Bill {
-  sponsors: Array<{ name: string; role: string }>;
+  sponsors: Array<{ name: string; role: string; personId?: string | null }>;
   actions: Array<{ date: string; chamber: string | null; text: string }>;
 }
 export const BILL_STATUS_LABEL: Record<string, string> = {
