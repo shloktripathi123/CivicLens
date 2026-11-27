@@ -3,7 +3,7 @@ import { upsertSource } from "./candidates.ts";
 
 const CONGRESS_SRC = {
   id: "congress-gov-api", name: "Congress.gov API (Library of Congress): sponsored legislation", url: "https://www.congress.gov/",
-  license: "Public domain (U.S. government work)", attribution: "Library of Congress, Congress.gov", authoritative: true,
+  license: "Congress.gov API data; third-party content may have separate rights", attribution: "Library of Congress, Congress.gov", authoritative: true,
 };
 const FEC_SRC = {
   id: "openfec-api", name: "OpenFEC API (Federal Election Commission): candidate financial totals", url: "https://www.fec.gov/data/",

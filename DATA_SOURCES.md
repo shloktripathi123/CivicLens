@@ -5,6 +5,33 @@ third-party datasets, text, photographs, or other materials. The downloaded
 database and caches are not distributed in this repository. Check current
 provider terms and the rights for the particular material before reuse.
 
+## Snapshot review (November 26, 2026)
+
+This is a source review, not legal advice or confirmation that the complete
+snapshot is cleared. The fresh ingest is still in progress. Review its final
+source inventory and contents before approving publication; the public database
+artifact and generated API assets both distribute derived data. Linked photos
+also need review before display, even when their image bytes are not in the
+database.
+
+| Included source or material | Evidence and remaining work |
+| --- | --- |
+| `congress-legislators`, including executive records | The upstream [CC0 dedication](https://github.com/unitedstates/congress-legislators/blob/main/LICENSE) covers the project data. Congress photo URLs point to the separate [unitedstates/images](https://github.com/unitedstates/images) collection, whose maintainers describe its photos as public domain. |
+| `census-geography`, `census-school-districts`, `census-county-population` | Census asks users to [cite its data](https://www.census.gov/about/policies/citation.html). These imports use federal geographic and population files; retain the dataset, vintage and source links. Do not assume separately attributed third-party material is covered. |
+| `wikidata` | [Wikidata's licensing policy](https://www.wikidata.org/wiki/Wikidata:Licensing) applies CC0 to structured data. The roster imports structured fields, not linked images or other namespace text. |
+| `congress-gov-api` | The [Library of Congress](https://www.loc.gov/apis/additional-apis/congress-dot-gov-api/) describes its API as providing data for reuse. The import includes bill titles and action descriptions; check the rights of any incorporated third-party content rather than treating everything on a federal website as a government work. |
+| `fec-openfec`, `openfec-api` | The adapters request candidate records and aggregate financial totals, not individual contributor records. The FEC's [sale-or-use restriction](https://www.fec.gov/updates/sale-or-use-contributor-information/) applies to individual contributor information; reassess if endpoints or fields change. |
+| `us-election-calendar`, `usa-gov-election-offices` | The calendar computes dates from federal statutes; the directory imports government office names and links. [USA.gov](https://www.usa.gov/government-copyright) cautions that federal sites can include third-party content and government branding must not imply endorsement. |
+| `openstates-people` | The [people repository](https://docs.openstates.org/contributing/people/) is dedicated under CC0, and [Open States terms](https://open.pluralpolicy.com/tos/) make no claim over collected data. The API also supplies third-party photo URLs, which the app displays; identify and clear each image or omit unverified photos before publication. |
+| `openstates-bills` | Open States makes no copyright claim, but its terms require users to respect third-party rights. The import stores state bill titles and latest-action text. Review the underlying state sources and applicable rights, or exclude the unverified material; the provider's statement alone does not clear all of it. |
+| `oregon-sos-voting-rules` | The app publishes its own rule-based notes and calculated dates using Oregon election information. The [Secretary of State site terms](https://sos.oregon.gov/Pages/terms-and-conditions.aspx) do not provide a general redistribution license; check the underlying rules and any copied wording before approving this source. |
+
+Voteview, Wikipedia's governor roster, Oregon Legislature OData, and the curated
+local-government dataset are excluded by the deployment workflow. Excluding
+them does not resolve rights for the other included sources or external media.
+Keep the workflow's rights confirmation and approval gate in place until the
+remaining issues are resolved; do not treat this review as permission to approve.
+
 - [congress-legislators](https://github.com/unitedstates/congress-legislators):
   the project dedicates its data to the public domain under CC0 1.0.
 - [Congress photographs](https://github.com/unitedstates/images): the
