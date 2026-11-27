@@ -148,6 +148,10 @@ interface PlaceAssetRecord {
   states: string[];
   lat: number | null;
   lon: number | null;
+  countyFacts?: {
+    geography: { landSqMi: number; waterSqMi: number; provenance: PlaceAssetRecord["provenance"] } | null;
+    population: { estimate: number; provenance: PlaceAssetRecord["provenance"] } | null;
+  } | null;
   provenance: { sourceId: string; sourceName: string; sourceUrl: string; asOf: string; grade: string | null; selfReported: boolean } | null;
 }
 
@@ -932,6 +936,7 @@ async function placePage(env: Env, origin: string, id: string): Promise<Response
     states: stateCodes,
     lat: record.lat,
     lon: record.lon,
+    countyFacts: record.countyFacts ?? null,
     provenance: record.provenance,
     ...(record.place.type === "state" ? {
       cityCount: basePack.cityCount,

@@ -1,5 +1,8 @@
 import type { DB } from "@civic/db";
 import { upsertSource } from "./candidates.ts";
+import { parseCsv } from "./csv.ts";
+
+export { parseCsv } from "./csv.ts";
 
 const BASE = "https://voteview.com/static/data/out";
 export const CONGRESS = 119;
@@ -11,24 +14,6 @@ export const SRC = {
   attribution: "Lewis, Poole, Rosenthal, Boche, Rudkin, Sonnet. Voteview: Congressional Roll-Call Votes Database",
   authoritative: false,
 };
-
-/** Minimal RFC 4180 parser (quoted fields, embedded commas and newlines). */
-export function parseCsv(text: string): Array<Record<string, string>> {
-  const rows: string[][] = [];
-  let row: string[] = [], f = "", q = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) {
-      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c;
-    } else if (c === '"') q = true;
-    else if (c === ",") { row.push(f); f = ""; }
-    else if (c === "\n") { row.push(f.replace(/\r$/, "")); rows.push(row); row = []; f = ""; }
-    else f += c;
-  }
-  if (f || row.length) { row.push(f); rows.push(row); }
-  const head = rows.shift() ?? [];
-  return rows.filter((r) => r.length === head.length).map((r) => Object.fromEntries(head.map((h, i) => [h, r[i]])));
-}
 
 export const CAST: Record<string, string> = {
   "1": "Yea", "2": "Yea", "3": "Yea", "4": "Nay", "5": "Nay", "6": "Nay", "7": "Present", "8": "Present", "9": "Did not vote",

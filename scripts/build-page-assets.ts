@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import {
-  allPlaces, childPlaces, getBill, getGovUnit, listBills, listSources, openDb,
+  allPlaces, childPlaces, countyFacts, getBill, getGovUnit, getSource, listBills, listSources, openDb,
 } from "@civic/db";
 import { STATES } from "@civic/domain";
 import { buildApp } from "../apps/api/src/app.ts";
@@ -18,6 +18,7 @@ async function main() {
     const output = resolve(root, "apps/api/static");
     await mkdir(output, { recursive: true });
     const places = allPlaces(db);
+    const factsByCounty = countyFacts(db);
     const placeById = new Map(places.map((place) => [place.id, place]));
     const sourceById = new Map(listSources(db).map((source) => [source.id, source]));
     const placesByState = new Map<string, typeof places>();
@@ -68,6 +69,7 @@ async function main() {
           states: [...placeStates].sort(),
           lat: place.lat,
           lon: place.lon,
+          countyFacts: factsByCounty.get(place.id) ?? null,
           provenance: (() => {
             const source = sources.get(place.sourceId);
             return source ? {

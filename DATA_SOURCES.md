@@ -37,8 +37,10 @@ provider terms and the rights for the particular material before reuse.
   does not remove Voteview records already present in an existing database.
 - [U.S. Census Bureau](https://www.census.gov/about/policies/citation.html):
   cite the Census Bureau as the original data source. Verify rights for any
-  separately attributed third-party material. The unified school-district
-  gazetteer represents districts as of January 1, 2024.
+  separately attributed third-party material. The county and unified
+  school-district gazetteers represent geography as of January 1, 2024.
+  The county population estimates are for July 1, 2024, and do not cover
+  every county-equivalent jurisdiction.
 - [FEC](https://www.fec.gov/updates/sale-or-use-contributor-information/):
   public availability does not eliminate restrictions on the sale or use of
   individual contributor information. Review the FEC's rules before using or

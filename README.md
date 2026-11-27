@@ -22,6 +22,9 @@ provide term start dates in the current-role feed, so those dates are shown as
 not provided and year-filtered searches omit them. The Census unified
 school-district dataset covers all states, but does not include every kind of
 school district or local-government officeholder.
+County pages show Census 2024 land and water area and, where available, a
+July 2024 population estimate. These are historical figures, not current
+counts. County officials, elections and meetings remain incomplete.
 
 ## Local development
 

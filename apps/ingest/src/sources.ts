@@ -38,6 +38,10 @@ const GRADINGS: Record<string, Grading> = {
     type: "government dataset",
     criteria: { primaryRecord: 2, authorship: 2, editorial: 2, independence: 2, verifiability: 1, currency: 1 },
   },
+  "census-county-population": {
+    type: "federal statistical agency population estimates",
+    criteria: { primaryRecord: 2, authorship: 2, editorial: 2, independence: 2, verifiability: 2, currency: 1 },
+  },
   "wikipedia-en": {
     type: "crowd-edited encyclopedia",
     criteria: { primaryRecord: 0, authorship: 1, editorial: 1, independence: 2, verifiability: 2, currency: 1 },

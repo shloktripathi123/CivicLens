@@ -120,6 +120,22 @@ export default async function PlaceRoute({ params }: { params: Promise<{ id: str
       </p>
       {p.approximateNote && <p className="empty" role="note"><strong>Approximate.</strong> {p.approximateNote}</p>}
 
+      {place.type === "county" && (
+        <section className="block" aria-labelledby="county-facts-h">
+          <h2 id="county-facts-h">County facts</h2>
+          {p.countyFacts?.population ? (
+            <p>Estimated population: {p.countyFacts.population.estimate.toLocaleString("en-US")} (July 1, 2024).{" "}
+              <Cite p={p.countyFacts.population.provenance} label="Population estimate" /></p>
+          ) : <p className="empty">Population estimate not available for this county in our data.</p>}
+          {p.countyFacts?.geography ? (
+            <p>Land: {p.countyFacts.geography.landSqMi.toLocaleString("en-US")} square miles;
+              water: {p.countyFacts.geography.waterSqMi.toLocaleString("en-US")} square miles (2024).{" "}
+              <Cite p={p.countyFacts.geography.provenance} label="County geography" /></p>
+          ) : <p className="empty">County area not available in our data.</p>}
+          <p className="src">County officials, offices and local election information may be incomplete or unavailable below.</p>
+        </section>
+      )}
+
       {p.levels.map((l) => <Level key={l.level} l={l} />)}
 
       {place.type !== "state" && <LocalGovernment placeId={place.id} apiUrl={API_URL} />}

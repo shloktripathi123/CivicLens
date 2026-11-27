@@ -21,6 +21,8 @@ try {
     ["office terms", "SELECT count(*) AS n FROM office_term", 1000],
     ["states with legislators", "SELECT count(DISTINCT state) AS n FROM office_term WHERE level='state'", 40],
     ["places", "SELECT count(*) AS n FROM place", 10000],
+    ["county geography records", "SELECT count(*) AS n FROM county_geography", 3000],
+    ["county population estimates", "SELECT count(*) AS n FROM county_population", 3000],
     ["races", "SELECT count(*) AS n FROM race", 100],
     ["bills", "SELECT count(*) AS n FROM bill", 100],
     ["state voting offices", "SELECT count(*) AS n FROM state_voting", 50],

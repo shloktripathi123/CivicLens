@@ -86,6 +86,10 @@ export interface PlacePage {
   overlaps: Array<{ place: PlaceSummary; relation: string; share: number | null }>;
   levels: PlaceLevel[]; completeness: { sectionsWithData: number; sectionsTotal: number; rule: string };
   states: string[]; cityCount?: number; cityNote?: string;
+  countyFacts?: {
+    geography: { landSqMi: number; waterSqMi: number; provenance: Provenance } | null;
+    population: { estimate: number; provenance: Provenance } | null;
+  } | null;
   provenance: Provenance | null;
 }
 export const PLACE_TYPE_LABEL: Record<PlaceSummary["type"], string> = { state: "State", county: "County", city: "City / town", zip: "ZIP (approximate)" };

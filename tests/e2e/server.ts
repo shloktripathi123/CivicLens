@@ -32,6 +32,10 @@ db.exec(`
   INSERT INTO place(id,type,name,label,name_norm,state,fips,parent_id,source_id,as_of) VALUES
     ('state:OR','state','Oregon','Oregon','oregon','OR','41',NULL,'congress-legislators','2025-01-01'),
     ('county:41001','county','Example County','Example County','example county','OR','41001','state:OR','congress-legislators','2025-01-01');
+  INSERT INTO county_geography(place_id,land_sq_mi,water_sq_mi,source_id,as_of)
+    VALUES('county:41001',100.5,2.1,'congress-legislators','2024-01-01');
+  INSERT INTO county_population(place_id,population,source_id,as_of)
+    VALUES('county:41001',12345,'congress-legislators','2024-07-01');
   INSERT INTO gov_unit(id,kind,name,state,place_id,function,official_url,source_id,as_of)
     VALUES('example-gov','county','Example County','OR','county:41001','County government','https://example.test/','congress-legislators','2025-01-01');
   INSERT INTO gov_office(id,unit_id,title,role,source_url,source_id,as_of)

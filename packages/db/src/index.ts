@@ -131,6 +131,16 @@ CREATE TABLE IF NOT EXISTS place (
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_place_state_type ON place(state, type);
+CREATE TABLE IF NOT EXISTS county_geography (
+  place_id TEXT PRIMARY KEY REFERENCES place(id),
+  land_sq_mi REAL NOT NULL, water_sq_mi REAL NOT NULL,
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS county_population (
+  place_id TEXT PRIMARY KEY REFERENCES place(id),
+  population INTEGER NOT NULL,
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS place_overlap (
   place_id TEXT NOT NULL REFERENCES place(id), other_id TEXT NOT NULL REFERENCES place(id),
   relation TEXT NOT NULL, share REAL,
@@ -224,7 +234,7 @@ export interface SourceRecord {
   license: string | null; attribution: string | null; retrievedAt: string; factCount: number;
 }
 
-const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "official_record", "voting_window", ...GOV_FACT_TABLES];
+const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "county_geography", "county_population", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "official_record", "voting_window", ...GOV_FACT_TABLES];
 
 export function listSources(db: DB): SourceRecord[] {
   const rows = db.prepare("SELECT * FROM source ORDER BY name").all() as Array<Record<string, unknown>>;
@@ -651,6 +661,41 @@ export function allPlaces(db: DB): PlaceRow[] {
 export function getPlaceRow(db: DB, id: string): PlaceRow | null {
   const r = db.prepare(`SELECT ${PLACE_COLS} FROM place WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
   return r ? toPlace(r) : null;
+}
+
+export interface CountyFactProvenance {
+  sourceId: string; sourceName: string; sourceUrl: string; asOf: string; grade: string | null; selfReported: boolean;
+}
+export interface CountyFacts {
+  geography: { landSqMi: number; waterSqMi: number; provenance: CountyFactProvenance } | null;
+  population: { estimate: number; provenance: CountyFactProvenance } | null;
+}
+
+export function countyFacts(db: DB, placeId?: string): Map<string, CountyFacts> {
+  const facts = new Map<string, CountyFacts>();
+  const where = placeId ? " WHERE f.place_id=?" : "";
+  const args = placeId ? [placeId] : [];
+  const geography = db.prepare(`SELECT f.place_id AS placeId, f.land_sq_mi AS landSqMi, f.water_sq_mi AS waterSqMi,
+    f.source_id AS sourceId, f.as_of AS asOf, s.name AS sourceName, s.url AS sourceUrl, s.grade, s.self_reported AS selfReported
+    FROM county_geography f JOIN source s ON s.id=f.source_id${where}`).all(...args) as Array<{
+      placeId: string; landSqMi: number; waterSqMi: number; sourceId: string; asOf: string;
+      sourceName: string; sourceUrl: string; grade: string | null; selfReported: number;
+    }>;
+  for (const { placeId, landSqMi, waterSqMi, selfReported, ...p } of geography) {
+    facts.set(placeId, { geography: { landSqMi, waterSqMi, provenance: { ...p, selfReported: !!selfReported } }, population: null });
+  }
+  const population = db.prepare(`SELECT f.place_id AS placeId, f.population AS estimate,
+    f.source_id AS sourceId, f.as_of AS asOf, s.name AS sourceName, s.url AS sourceUrl, s.grade, s.self_reported AS selfReported
+    FROM county_population f JOIN source s ON s.id=f.source_id${where}`).all(...args) as Array<{
+      placeId: string; estimate: number; sourceId: string; asOf: string;
+      sourceName: string; sourceUrl: string; grade: string | null; selfReported: number;
+    }>;
+  for (const { placeId, estimate, selfReported, ...p } of population) {
+    const item = facts.get(placeId) ?? { geography: null, population: null };
+    item.population = { estimate, provenance: { ...p, selfReported: !!selfReported } };
+    facts.set(placeId, item);
+  }
+  return facts;
 }
 
 export function getSource(db: DB, id: string) {

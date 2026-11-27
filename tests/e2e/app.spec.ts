@@ -150,6 +150,8 @@ test("race, bill, election and place navigation", async ({ page }) => {
   await page.goto("/places");
   await page.getByRole("link", { name: "Oregon", exact: true }).click();
   await page.getByRole("link", { name: "Example County", exact: true }).click();
+  await expect(page.getByText("Estimated population: 12,345", { exact: false })).toBeVisible();
+  await expect(page.getByText("Land: 100.5 square miles", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: /Example County/ }).last().click();
   await expect(page.getByText("Alex Example")).toBeVisible();
 });

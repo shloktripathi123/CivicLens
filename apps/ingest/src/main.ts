@@ -8,7 +8,7 @@ import { ingestOregonLegislators } from "./oregonLegislators.ts";
 import { ingestCalendar } from "./calendar.ts";
 import { ingestRoster } from "./roster.ts";
 import { ingestFec } from "./fec.ts";
-import { ingestPlaces } from "./places.ts";
+import { ingestCountyFacts, ingestPlaces } from "./places.ts";
 import { ingestLocalGov } from "./localgov.ts";
 import { ingestVotingInfo } from "./votinginfo.ts";
 import { seedVotingWindows } from "./votingwindows.ts";
@@ -33,6 +33,7 @@ async function main() {
   console.log(`Race calendar: ${ingestCalendar(db)} statutory races ensured.`);
   await ingestFec(db);
   await ingestPlaces(db);
+  await ingestCountyFacts(db);
   console.log(`Local government: ${await ingestLocalGov(db, { skipCurated: skipUnreviewed })} Census unified school districts.`);
   console.log(`State election offices: ${await ingestVotingInfo(db)} linked.`);
   if (process.env.SKIP_VOTEVIEW === "1") {

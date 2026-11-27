@@ -1,5 +1,5 @@
 import {
-  childPlaces, countPlaces, getPlaceRow, getSource, listSources, listRaces, overlapsOf, sittingOfficials, type DB, type PlaceRow, type RaceDto,
+  childPlaces, countPlaces, countyFacts, getPlaceRow, getSource, listSources, listRaces, overlapsOf, sittingOfficials, type DB, type PlaceRow, type RaceDto,
 } from "@civic/db";
 import { stateByUsps, type PlaceSummary } from "@civic/domain";
 import { toPlaceSummary } from "./placeSearch.ts";
@@ -21,7 +21,7 @@ const SITES = {
   local: "https://www.usa.gov/local-governments",
 };
 
-const ZIP_NOTE =
+export const ZIP_APPROXIMATE_NOTE =
   "ZIP codes are mail-delivery routes, not legal boundaries. This page uses the Census Bureau's ZIP Code Tabulation Area " +
   "(ZCTA), which approximates a ZIP code. A ZIP can overlap several counties, cities and districts, so every overlap is listed.";
 
@@ -78,7 +78,7 @@ export function buildPlacePage(db: DB, place: PlaceRow, summary: (p: PlaceRow) =
   const src = getSource(db, place.sourceId);
   return {
     place: summary(place),
-    approximateNote: place.type === "zip" ? ZIP_NOTE : undefined,
+    approximateNote: place.type === "zip" ? ZIP_APPROXIMATE_NOTE : undefined,
     parents,
     children,
     overlaps: overlaps.map((o) => ({ place: summary(o.place), relation: o.relation, share: o.share })),
@@ -90,6 +90,7 @@ export function buildPlacePage(db: DB, place: PlaceRow, summary: (p: PlaceRow) =
     },
     states: stateList,
     lat: place.lat, lon: place.lon,
+    countyFacts: place.type === "county" ? countyFacts(db, place.id).get(place.id) ?? null : null,
     provenance: src ? provenanceOf(db, src.id, place.asOf) : null,
     ...extra,
   };

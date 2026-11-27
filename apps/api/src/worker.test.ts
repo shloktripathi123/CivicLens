@@ -40,6 +40,14 @@ const city = {
   source_id: "census-geography",
   as_of: "2025-01-01",
 };
+const countyFacts = {
+  geography: { landSqMi: 58, waterSqMi: 62, provenance: {
+    sourceId: "census-geography", sourceName: "Census", sourceUrl: "https://www.census.gov/", asOf: "2024-01-01", grade: "A", selfReported: false,
+  } },
+  population: { estimate: 800000, provenance: {
+    sourceId: "census-county-population", sourceName: "Census", sourceUrl: "https://www.census.gov/", asOf: "2024-07-01", grade: "A", selfReported: false,
+  } },
+};
 
 const personId = "73c63fc6-1885-579c-bfb0-8b2a651a6767";
 const race = {
@@ -129,6 +137,12 @@ function mockEnv(hidden: string[] = []) {
               parents: [], children: [], overlaps: [], states: ["MA"], lat: null, lon: null,
               provenance: null,
             },
+            "county:25025": {
+              place: { id: "county:25025", type: "county", name: "Suffolk", label: "Suffolk County",
+                state: "MA", stateName: "Massachusetts", approximate: false },
+              parents: [], children: [], overlaps: [], states: ["MA"], lat: null, lon: null,
+              provenance: null, countyFacts,
+            },
           },
         });
         if (path.endsWith("/places.json")) return Response.json({ items: [] });
@@ -213,6 +227,12 @@ test("Cloudflare API serves a location detail page with explicit government leve
   assert.equal(page.place.label, "Boston city");
   assert.deepEqual(page.levels.map((level) => level.level), ["federal", "state"]);
   assert.equal(page.completeness.sectionsTotal, 2);
+});
+
+test("Cloudflare API serves sourced county facts from static assets", async () => {
+  const response = await get(`/v1/places/${encodeURIComponent("county:25025")}`);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json() as { countyFacts: unknown }).countyFacts, countyFacts);
 });
 
 test("Cloudflare API validates bill, race, and calendar filters", async () => {
