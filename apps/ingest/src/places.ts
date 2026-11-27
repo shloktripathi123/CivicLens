@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import type { DB } from "@civic/db";
 import { displayName, normalizePlaceName, placeId, STATES, stateByFips, stateByUsps } from "@civic/domain";
 import { upsertSource } from "./candidates.ts";
+import { parseCsv } from "./csv.ts";
 
 const GAZ = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer";
 const REL = "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520";
@@ -13,6 +14,15 @@ const SRC = {
   id: "census-geography",
   name: "U.S. Census Bureau Gazetteer and ZCTA relationship files",
   url: "https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html",
+  license: "Public domain (U.S. government work)",
+  attribution: "U.S. Census Bureau",
+  authoritative: true,
+};
+const POPULATION_URL = "https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/totals/co-est2024-alldata.csv";
+const SRC_POPULATION = {
+  id: "census-county-population",
+  name: "U.S. Census Bureau 2024 county population estimates",
+  url: POPULATION_URL,
   license: "Public domain (U.S. government work)",
   attribution: "U.S. Census Bureau",
   authoritative: true,
@@ -146,7 +156,7 @@ export async function ingestPlaces(db: DB) {
   let overlapCount = 0;
   db.exec("BEGIN");
   try {
-    db.exec("DELETE FROM place_overlap; DELETE FROM place;");
+    db.exec("DELETE FROM county_geography; DELETE FROM county_population; DELETE FROM place_overlap; DELETE FROM place;");
     for (const p of places.values()) {
       insP.run(p.id, p.type, p.name, p.label, normalizePlaceName(p.name), p.state, p.fips, p.lat, p.lon, p.parentId, p.approximate ? 1 : 0, SRC.id, asOf);
     }
@@ -158,4 +168,44 @@ export async function ingestPlaces(db: DB) {
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
   console.log(`places: ${places.size} (${zipCount} ZIP areas), ${overlapCount} overlaps`);
+}
+
+export function loadCountyFacts(db: DB, geography: Row[], population: Row[]) {
+  const counties = new Set((db.prepare("SELECT id FROM place WHERE type='county'").all() as Array<{ id: string }>).map((row) => row.id));
+  const insertGeo = db.prepare("INSERT INTO county_geography VALUES (?,?,?,?,?)");
+  const insertPop = db.prepare("INSERT INTO county_population VALUES (?,?,?,?)");
+  let geographyCount = 0, populationCount = 0;
+  db.exec("BEGIN");
+  try {
+    db.exec("DELETE FROM county_geography; DELETE FROM county_population;");
+    for (const row of geography) {
+      const id = placeId("county", row.GEOID);
+      const land = num(row.ALAND_SQMI), water = num(row.AWATER_SQMI);
+      if (!counties.has(id) || land === null || water === null || land < 0 || water < 0) continue;
+      insertGeo.run(id, land, water, SRC.id, "2024-01-01");
+      geographyCount++;
+    }
+    for (const row of population) {
+      if (row.SUMLEV !== "050" || !/^\d{2}$/.test(row.STATE) || !/^\d{3}$/.test(row.COUNTY)) continue;
+      const id = placeId("county", row.STATE + row.COUNTY);
+      if (!counties.has(id) || !/^\d+$/.test(row.POPESTIMATE2024)) continue;
+      insertPop.run(id, Number(row.POPESTIMATE2024), SRC_POPULATION.id, "2024-07-01");
+      populationCount++;
+    }
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); throw e; }
+  console.log(`County facts: ${geographyCount}/${counties.size} geography records, ${populationCount}/${counties.size} population estimates.`);
+  return { geographyCount, populationCount };
+}
+
+export async function ingestCountyFacts(db: DB) {
+  const [geography, populationFile] = await Promise.all([
+    gazetteer("2024_Gaz_counties_national"),
+    fetchCached(POPULATION_URL, "co-est2024-alldata.csv"),
+  ]);
+  const population = parseCsv(readFileSync(populationFile, "utf8"));
+  if (!population.length || !("POPESTIMATE2024" in population[0])) throw new Error("Census county population file has an unexpected format.");
+  upsertSource(db, SRC);
+  upsertSource(db, SRC_POPULATION);
+  return loadCountyFacts(db, geography, population);
 }

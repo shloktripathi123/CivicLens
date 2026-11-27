@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Conflict from "@/components/Conflict";
 import Cite from "@/components/Cite";
+import { RecordSections } from "@/components/DeepRecord";
 import { API_URL, STATUS_LABEL, describe, usd, type CandidateProfile, type Provenance } from "@/lib/api";
 
 async function load(id: string): Promise<CandidateProfile | null> {
-  const res = await fetch(`${API_URL}/v1/candidates/${id}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/candidates/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
@@ -43,7 +44,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
         <div>
           <h1>{person.name}</h1>
           <p className="lead">
-            Candidate for {candidacy.office} · {candidacy.electionYear} general election ({candidacy.electionDate})
+            Candidate for {candidacy.office} · {candidacy.electionYear} {race.electionType} election ({candidacy.electionDate})
           </p>
           <p>
             <span className="chip">{candidacy.party ?? "Party not available"}</span>
@@ -53,13 +54,19 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
           <p><a href={`/races/${encodeURIComponent(race.id)}`}>See everyone in this race</a>
             {record.terms.length > 0 && <> · <a href={`/people/${id}`}>Full official record</a></>}</p>
           <p className="src">Data last updated {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString() : "unknown"}</p>
+          <nav aria-label="Candidate sections" className="src">
+            Jump to: <a href="#ov">Overview</a> · <a href="#say">Positions</a> · <a href="#did">Record</a> · <a href="#money">Money</a>
+          </nav>
         </div>
       </div>
 
       <section className="block" aria-labelledby="cov">
         <h2 id="cov">Data coverage</h2>
         <ul className="cov">
-          {SHOWN.map((k) => <li key={k} className={coverage[k] ?? "unavailable"}>{LABELS[k]}: {coverage[k] ?? "unavailable"}</li>)}
+          {SHOWN.map((k) => {
+            const status = (k === "bills" || k === "votes") && p.deep?.sections[k].status === "has_data" ? "partial" : coverage[k] ?? "unavailable";
+            return <li key={k} className={status}>{LABELS[k]}: {status}</li>;
+          })}
         </ul>
       </section>
 
@@ -133,7 +140,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
                   <tr key={i}>
                     <td>{t.title}<br /><span className="src">{t.body}</span></td>
                     <td>{t.party ?? <span className="na">Not available</span>}</td>
-                    <td>{t.start.slice(0, 10)} → {t.end ? t.end.slice(0, 10) : "present"}</td>
+                    <td>{t.start ? t.start.slice(0, 10) : "Start not provided"} → {t.end ? t.end.slice(0, 10) : "present"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -141,7 +148,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
             <Src p={record.terms[0].provenance} />
           </>
         ) : <p className="na">No offices held are in our data yet (state and local history is still being added).</p>}
-        <p className="na">Bills and votes: not available yet.</p>
+        <RecordSections deep={p.deep} person={person} sections={["bills", "votes"]} />
       </section>
 
       <section className="block" aria-labelledby="money">

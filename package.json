@@ -14,7 +14,9 @@
     "import:d1": "node scripts/import-d1.mjs",
     "deploy:api": "npm run build:search-assets && npm run build:page-assets && npx wrangler deploy --config apps/api/wrangler.jsonc",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import tsx --test \"packages/**/*.test.ts\" \"tests/**/*.test.ts\" \"apps/api/**/*.test.ts\" \"apps/ingest/**/*.test.ts\""
+    "test:ci": "node --import tsx --test \"packages/**/*.test.ts\" \"apps/ingest/**/*.test.ts\" \"apps/api/**/*.test.ts\" \"tests/web/*.test.ts\"",
+    "test:e2e": "playwright test -c playwright.e2e.config.ts",
+    "test": "node --import tsx --test --test-concurrency=1 \"packages/**/*.test.ts\" \"tests/**/*.test.ts\" \"apps/api/**/*.test.ts\" \"apps/ingest/**/*.test.ts\""
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

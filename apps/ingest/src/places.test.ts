@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cityDefs, countyDefs, parseCensus, zipRelations } from "./places.ts";
+import { countyFacts, openDb } from "@civic/db";
+import { parseCsv } from "./csv.ts";
+import { cityDefs, countyDefs, loadCountyFacts, parseCensus, zipRelations } from "./places.ts";
 
 const COUNTIES = "USPS\tGEOID\tANSICODE\tNAME\tALAND\tAWATER\tALAND_SQMI\tAWATER_SQMI\tINTPTLAT\tINTPTLONG   \n" +
   "OR\t41051\t01155136\tMultnomah County\t1\t1\t1\t1\t45.5\t-122.4   \n";
@@ -29,4 +31,29 @@ test("relationship parsing handles the BOM and skips rows without a ZCTA", () =>
   const rel = zipRelations(parseCensus(REL, "|"), "COUNTY");
   assert.equal(rel.length, 1);
   assert.deepEqual({ zip: rel[0].zip, other: rel[0].otherGeoid, share: rel[0].share }, { zip: "97201", other: "41051", share: 0.75 });
+});
+
+test("county facts join geography and estimates by FIPS and preserve missing data", () => {
+  const db = openDb(":memory:");
+  try {
+    db.exec(`
+      INSERT INTO source(id,name,url,retrieved_at,authoritative,grade) VALUES
+        ('census-geography','Geography','https://example.test/geo','2024-01-01',1,'A'),
+        ('census-county-population','Population','https://example.test/pop','2024-01-01',1,'A');
+      INSERT INTO place(id,type,name,label,name_norm,state,fips,source_id,as_of) VALUES
+        ('county:41051','county','Multnomah','Multnomah County','multnomah','OR','41051','census-geography','2024-01-01'),
+        ('county:06037','county','Los Angeles','Los Angeles County','los angeles','CA','06037','census-geography','2024-01-01');
+    `);
+    const population = parseCsv('SUMLEV,STATE,COUNTY,CTYNAME,POPESTIMATE2024\n' +
+      '050,41,051,"Multnomah, County",800000\n040,41,000,Oregon,4000000\n050,06,037,Los Angeles,\n');
+    assert.deepEqual(loadCountyFacts(db, parseCensus(COUNTIES, "\t"), population), { geographyCount: 1, populationCount: 1 });
+    const facts = countyFacts(db);
+    assert.equal(facts.get("county:41051")?.population?.estimate, 800000);
+    assert.equal(facts.get("county:41051")?.population?.provenance.asOf, "2024-07-01");
+    assert.equal(facts.get("county:41051")?.geography?.landSqMi, 1);
+    assert.equal(facts.has("county:06037"), false);
+    assert.equal(countyFacts(db, "county:06037").size, 0);
+  } finally {
+    db.close();
+  }
 });

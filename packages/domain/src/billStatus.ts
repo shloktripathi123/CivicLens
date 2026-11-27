@@ -1,7 +1,8 @@
-export const BILL_STATUSES = ["introduced", "in_committee", "passed_one_chamber", "passed_both", "enacted", "vetoed", "failed", "withdrawn"] as const;
+export const BILL_STATUSES = ["unknown", "introduced", "in_committee", "passed_one_chamber", "passed_both", "enacted", "vetoed", "failed", "withdrawn"] as const;
 export type BillStatus = (typeof BILL_STATUSES)[number];
 
 export const BILL_STATUS_LABEL: Record<BillStatus, string> = {
+  unknown: "Status not verified",
   introduced: "Proposed — introduced",
   in_committee: "Proposed — in committee",
   passed_one_chamber: "Proposed — passed one chamber",

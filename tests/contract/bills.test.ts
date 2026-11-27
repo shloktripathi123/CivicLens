@@ -13,7 +13,7 @@ test("bills: enacted vs proposed is never confused (SC-004)", { skip }, async ()
   const all = (await app.inject({ url: "/v1/bills?jurisdiction=OR&limit=100" })).json();
   assert.ok(all.total > 1000);
   for (const b of all.items) {
-    assert.equal(b.isLaw, b.status === "enacted");
+    assert.equal(b.isLaw, b.status === "unknown" ? null : b.status === "enacted");
     assert.ok(b.provenance.sourceUrl && b.provenance.asOf && b.url.startsWith("https://"));
   }
   const enacted = (await app.inject({ url: "/v1/bills?status=enacted&limit=50" })).json();

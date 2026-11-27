@@ -9,9 +9,8 @@ const SRC = {
   license: "Open States terms of use; no copyright claim by Open States", attribution: "Open States (Plural Policy)", authoritative: false,
 };
 const CACHE = resolve(process.env.CACHE_DIR ?? resolve(import.meta.dirname, "../../../data/cache"), "openstates");
-const ASSEMBLY_YEAR_START = "2025-01-01";
 
-interface OsPerson {
+export interface OsPerson {
   id: string; name: string; party: string; given_name: string; family_name: string; image: string; email: string;
   gender: string; birth_date: string;
   current_role?: { title: string; org_classification: string; district: string };
@@ -20,7 +19,7 @@ interface OsPerson {
   offices: Array<{ voice: string; address: string; classification: string }>;
 }
 
-export const JURISDICTIONS = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","District of Columbia","Puerto Rico"];
+export const JURISDICTIONS = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","District of Columbia","Puerto Rico"];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function page(key: string, juris: string, n: number): Promise<{ results: OsPerson[]; pagination: { max_page: number } } | null> {
@@ -39,14 +38,15 @@ async function page(key: string, juris: string, n: number): Promise<{ results: O
   return null;
 }
 
-/** Imports sitting state legislators (Oregon is handled by the official OLIS feed). Resumable via on-disk page cache. */
-export async function ingestOpenStates(db: DB): Promise<number> {
+/** Imports sitting state legislators. Resumable via on-disk page cache. */
+export async function ingestOpenStates(db: DB, { includeOregon = false }: { includeOregon?: boolean } = {}): Promise<number> {
   const key = process.env.OPENSTATES_API_KEY;
   if (!key) { console.warn("OPENSTATES_API_KEY not set; skipping state legislators."); return 0; }
   mkdirSync(CACHE, { recursive: true });
   upsertSource(db, SRC);
   const all: OsPerson[] = [];
   for (const juris of JURISDICTIONS) {
+    if (juris === "Oregon" && !includeOregon) continue;
     let max = 1;
     for (let n = 1; n <= max; n++) {
       const j = await page(key, juris, n);
@@ -55,14 +55,16 @@ export async function ingestOpenStates(db: DB): Promise<number> {
       all.push(...j.results);
     }
   }
-  const people = all.filter((p) => p.current_role && !p.jurisdiction.id.includes("state:or/"));
+  const people = all.filter((p) => p.current_role && (includeOregon || !p.jurisdiction.id.includes("state:or/")));
   if (people.length < 500) { console.warn("Open States: only " + people.length + " people, skipping."); return 0; }
+  return loadOpenStatesPeople(db, people, new Date().toISOString().slice(0, 10));
+}
 
-  const asOf = new Date().toISOString().slice(0, 10);
+export function loadOpenStatesPeople(db: DB, people: OsPerson[], asOf: string): number {
   const insP = db.prepare("INSERT OR REPLACE INTO person (id,canonical_name,given,family,birth_date,gender,photo_url,status,source_id,as_of) VALUES (?,?,?,?,?,?,?,'current',?,?)");
   const insI = db.prepare("INSERT OR IGNORE INTO person_identifier (person_id,scheme,value) VALUES (?,?,?)");
   const insN = db.prepare("INSERT INTO person_name (person_id,name,name_norm,kind) VALUES (?,?,?,?)");
-  const insT = db.prepare("INSERT INTO office_term (person_id,level,branch,body,title,state,district,party,start_date,end_date,website,phone,address,contact_form,office_type,how_filled,source_id,as_of) VALUES (?,'state','legislative',?,?,?,?,?,?,NULL,?,?,?,?,'state_legislator',NULL,?,?)");
+  const insT = db.prepare("INSERT INTO office_term (person_id,level,branch,body,title,state,district,party,start_date,start_date_known,end_date,website,phone,address,contact_form,office_type,how_filled,source_id,as_of) VALUES (?,'state','legislative',?,?,?,?,?,?,0,NULL,?,?,?,?,'state_legislator',NULL,?,?)");
   const insC = db.prepare("INSERT OR REPLACE INTO coverage (person_id,section,status) VALUES (?,?,?)");
 
   db.exec("BEGIN");
@@ -83,7 +85,7 @@ export async function ingestOpenStates(db: DB): Promise<number> {
       insI.run(id, "openstates", p.id);
       insN.run(id, name, normalizeName(name), "legal");
       insT.run(id, p.jurisdiction.name + (upper ? " State Senate" : " Legislature (lower chamber)"), p.current_role!.title,
-        st, p.current_role!.district || null, p.party || null, ASSEMBLY_YEAR_START,
+        st, p.current_role!.district || null, p.party || null, asOf,
         p.links[0]?.url ?? p.openstates_url, office?.voice || null, office?.address || null,
         p.email ? "mailto:" + p.email : null, SRC.id, asOf);
       for (const s of ["identity", "terms", "contact"]) insC.run(id, s, "complete");

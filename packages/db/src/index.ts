@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS office_term (
   person_id TEXT NOT NULL REFERENCES person(id),
   level TEXT NOT NULL, branch TEXT NOT NULL, body TEXT NOT NULL, title TEXT NOT NULL,
   state TEXT, district TEXT, party TEXT, start_date TEXT NOT NULL, end_date TEXT,
+  start_date_known INTEGER NOT NULL DEFAULT 1,
   leadership_role TEXT, website TEXT, phone TEXT, address TEXT, contact_form TEXT,
   office_type TEXT, how_filled TEXT,
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL,
@@ -130,6 +131,16 @@ CREATE TABLE IF NOT EXISTS place (
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_place_state_type ON place(state, type);
+CREATE TABLE IF NOT EXISTS county_geography (
+  place_id TEXT PRIMARY KEY REFERENCES place(id),
+  land_sq_mi REAL NOT NULL, water_sq_mi REAL NOT NULL,
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS county_population (
+  place_id TEXT PRIMARY KEY REFERENCES place(id),
+  population INTEGER NOT NULL,
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS place_overlap (
   place_id TEXT NOT NULL REFERENCES place(id), other_id TEXT NOT NULL REFERENCES place(id),
   relation TEXT NOT NULL, share REAL,
@@ -152,9 +163,11 @@ CREATE TABLE IF NOT EXISTS bill (
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_bill_status ON bill(jurisdiction, status);
+CREATE INDEX IF NOT EXISTS idx_bill_source_url ON bill(source_id, url);
 CREATE TABLE IF NOT EXISTS bill_sponsor (
   bill_id TEXT NOT NULL REFERENCES bill(id), name TEXT NOT NULL, role TEXT NOT NULL,
-  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL,
+  person_id TEXT REFERENCES person(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_bill_sponsor ON bill_sponsor(bill_id);
 CREATE TABLE IF NOT EXISTS bill_action (
@@ -190,8 +203,18 @@ const SOURCE_COLUMNS: Array<[string, string]> = [
 function migrate(db: DB) {
   const have = new Set((db.prepare("PRAGMA table_info(source)").all() as Array<{ name: string }>).map((c) => c.name));
   for (const [name, type] of SOURCE_COLUMNS) if (!have.has(name)) db.exec(`ALTER TABLE source ADD COLUMN ${name} ${type}`);
+  const haveSponsor = new Set((db.prepare("PRAGMA table_info(bill_sponsor)").all() as Array<{ name: string }>).map((c) => c.name));
+  if (!haveSponsor.has("person_id")) db.exec("ALTER TABLE bill_sponsor ADD COLUMN person_id TEXT REFERENCES person(id) ON DELETE SET NULL");
   const haveTerm = new Set((db.prepare("PRAGMA table_info(office_term)").all() as Array<{ name: string }>).map((c) => c.name));
   for (const name of ["office_type", "how_filled"]) if (!haveTerm.has(name)) db.exec(`ALTER TABLE office_term ADD COLUMN ${name} TEXT`);
+  if (!haveTerm.has("start_date_known")) {
+    db.exec("BEGIN");
+    try {
+      db.exec("ALTER TABLE office_term ADD COLUMN start_date_known INTEGER NOT NULL DEFAULT 1");
+      db.exec("UPDATE office_term SET start_date_known = 0 WHERE source_id = 'openstates-people'");
+      db.exec("COMMIT");
+    } catch (e) { db.exec("ROLLBACK"); throw e; }
+  }
   backfillOfficeTypes(db);
 }
 
@@ -215,7 +238,7 @@ export interface SourceRecord {
   license: string | null; attribution: string | null; retrievedAt: string; factCount: number;
 }
 
-const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "official_record", "voting_window", ...GOV_FACT_TABLES];
+const FACT_TABLES = ["person", "office_term", "committee", "committee_membership", "office", "candidacy", "finance_summary", "education", "career_item", "agenda_item", "social", "place", "county_geography", "county_population", "place_overlap", "bill", "bill_sponsor", "bill_action", "state_voting", "state_voting_guide", "official_record", "voting_window", ...GOV_FACT_TABLES];
 
 export function listSources(db: DB): SourceRecord[] {
   const rows = db.prepare("SELECT * FROM source ORDER BY name").all() as Array<Record<string, unknown>>;
@@ -265,7 +288,7 @@ interface SummaryRow {
 
 const SUMMARY_SQL = `
 SELECT p.id, p.canonical_name, p.photo_url, p.status,
-       t.body, t.party, t.state, t.district, t.start_date, t.end_date, t.level
+       t.body, t.party, t.state, t.district, CASE WHEN t.start_date_known = 1 THEN t.start_date END AS start_date, t.end_date, t.level
 FROM person p
 LEFT JOIN office_term t ON t.id = (
   SELECT id FROM office_term WHERE person_id = p.id ORDER BY start_date DESC LIMIT 1
@@ -273,7 +296,7 @@ LEFT JOIN office_term t ON t.id = (
 
 function toSummary(db: DB, r: SummaryRow): PersonSummary {
   const first = db
-    .prepare("SELECT MIN(start_date) AS s FROM office_term WHERE person_id = ?")
+    .prepare("SELECT MIN(start_date) AS s FROM office_term WHERE person_id = ? AND start_date_known = 1")
     .get(r.id) as { s: string | null };
   const candidacy = latestCandidacy(db, r.id);
   const sought = candidacy
@@ -341,16 +364,34 @@ export function allPersonMeta(db: DB): PersonMeta[] {
   const rows = db
     .prepare(
       `SELECT p.id, p.status, COALESCE(p.family, p.canonical_name) AS family,
-              (SELECT level FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS level,
+              COALESCE(
+                (SELECT level FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1),
+                (SELECT o.level FROM candidacy c JOIN race ra ON ra.id=c.race_id JOIN office o ON o.id=ra.office_id
+                 JOIN election e ON e.id=ra.election_id WHERE c.person_id=p.id ORDER BY e.date DESC LIMIT 1)
+              ) AS level,
               (SELECT body FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS body,
               (SELECT state FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS state,
               (SELECT party FROM office_term WHERE person_id=p.id ORDER BY start_date DESC LIMIT 1) AS party,
-              (SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id) AS startYear,
+              (SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id AND start_date_known=1) AS startYear,
               (SELECT MAX(substr(COALESCE(end_date,'9999'),1,4)) FROM office_term WHERE person_id=p.id) AS endYear,
               (SELECT group_concat(DISTINCT body) FROM office_term WHERE person_id=p.id) AS bodies,
               (SELECT group_concat(DISTINCT party) FROM office_term WHERE person_id=p.id) AS parties,
               (SELECT group_concat(DISTINCT state) FROM office_term WHERE person_id=p.id) AS states,
               (SELECT group_concat(DISTINCT office_type) FROM office_term WHERE person_id=p.id) AS officeTypes,
+              (SELECT group_concat(DISTINCT CASE
+                 WHEN lower(body) LIKE '%senate%' OR lower(title) LIKE '%senator%' THEN 'senate'
+                 WHEN lower(body) LIKE '%house%' OR lower(title) LIKE '%representative%' THEN 'house'
+                 ELSE NULL END) FROM office_term WHERE person_id=p.id AND level='state') AS legislativeTypes,
+              (SELECT group_concat(DISTINCT CASE
+                 WHEN lower(o.title) LIKE '%vice president%' THEN 'vice_president'
+                 WHEN lower(o.title) LIKE '%president%' THEN 'president'
+                 WHEN lower(o.body) LIKE '%senate%' OR lower(o.title) LIKE '%senator%' THEN 'senate'
+                 WHEN lower(o.body) LIKE '%house%' OR lower(o.title) LIKE '%representative%' THEN 'house'
+                 WHEN lower(o.title) LIKE '%governor%' THEN 'governor'
+                 WHEN lower(o.title) LIKE '%justice%' OR lower(o.title) LIKE '%judge%' THEN 'judge'
+                 ELSE NULL END)
+               FROM candidacy c JOIN race ra ON ra.id=c.race_id JOIN office o ON o.id=ra.office_id
+               WHERE c.person_id=p.id) AS candidateTypes,
               (SELECT COUNT(*) FROM candidacy WHERE person_id=p.id) AS ncand,
               (SELECT group_concat(o.title || ' ' || o.jurisdiction, ' ') FROM candidacy c JOIN race ra ON ra.id=c.race_id
                  JOIN office o ON o.id=ra.office_id WHERE c.person_id=p.id) AS officeSought,
@@ -375,7 +416,7 @@ export function allPersonMeta(db: DB): PersonMeta[] {
     states: [r.states, r.candStates].filter(Boolean).join(","),
     family: (r.family ?? "").toLowerCase(),
     candidate: Number(r.ncand) > 0,
-    officeTypes: r.officeTypes ?? "",
+    officeTypes: [r.officeTypes, r.legislativeTypes, r.candidateTypes].filter(Boolean).join(","),
     officeSought: (r.officeSought ?? "").toLowerCase(),
     electionYear: r.candYear ? Number(r.candYear) : null,
     sought: r.officeSought ?? "",
@@ -392,7 +433,7 @@ export function getSummaries(db: DB, ids: string[]): PersonSummary[] {
 
 export interface TermDto {
   title: string; body: string; level: string; branch: string; party: string | null;
-  state: string | null; district: string | null; start: string; end: string | null;
+  state: string | null; district: string | null; start: string | null; end: string | null;
   provenance: Provenance;
 }
 
@@ -404,12 +445,12 @@ function provFor(db: DB, sourceId: string, asOf: string): Provenance {
 
 export function getTimeline(db: DB, id: string): TermDto[] {
   const rows = db
-    .prepare("SELECT * FROM office_term WHERE person_id = ? ORDER BY start_date")
+    .prepare("SELECT *, CASE WHEN start_date_known = 1 THEN start_date END AS actual_start FROM office_term WHERE person_id = ? ORDER BY start_date")
     .all(id) as Array<Record<string, string | null>>;
   return rows.map((t) => ({
     title: t.title as string, body: t.body as string, level: t.level as string, branch: t.branch as string,
     party: t.party, state: t.state, district: t.district,
-    start: t.start_date as string, end: t.end_date,
+    start: t.actual_start, end: t.end_date,
     provenance: provFor(db, t.source_id as string, t.as_of as string),
   }));
 }
@@ -626,6 +667,41 @@ export function getPlaceRow(db: DB, id: string): PlaceRow | null {
   return r ? toPlace(r) : null;
 }
 
+export interface CountyFactProvenance {
+  sourceId: string; sourceName: string; sourceUrl: string; asOf: string; grade: string | null; selfReported: boolean;
+}
+export interface CountyFacts {
+  geography: { landSqMi: number; waterSqMi: number; provenance: CountyFactProvenance } | null;
+  population: { estimate: number; provenance: CountyFactProvenance } | null;
+}
+
+export function countyFacts(db: DB, placeId?: string): Map<string, CountyFacts> {
+  const facts = new Map<string, CountyFacts>();
+  const where = placeId ? " WHERE f.place_id=?" : "";
+  const args = placeId ? [placeId] : [];
+  const geography = db.prepare(`SELECT f.place_id AS placeId, f.land_sq_mi AS landSqMi, f.water_sq_mi AS waterSqMi,
+    f.source_id AS sourceId, f.as_of AS asOf, s.name AS sourceName, s.url AS sourceUrl, s.grade, s.self_reported AS selfReported
+    FROM county_geography f JOIN source s ON s.id=f.source_id${where}`).all(...args) as Array<{
+      placeId: string; landSqMi: number; waterSqMi: number; sourceId: string; asOf: string;
+      sourceName: string; sourceUrl: string; grade: string | null; selfReported: number;
+    }>;
+  for (const { placeId, landSqMi, waterSqMi, selfReported, ...p } of geography) {
+    facts.set(placeId, { geography: { landSqMi, waterSqMi, provenance: { ...p, selfReported: !!selfReported } }, population: null });
+  }
+  const population = db.prepare(`SELECT f.place_id AS placeId, f.population AS estimate,
+    f.source_id AS sourceId, f.as_of AS asOf, s.name AS sourceName, s.url AS sourceUrl, s.grade, s.self_reported AS selfReported
+    FROM county_population f JOIN source s ON s.id=f.source_id${where}`).all(...args) as Array<{
+      placeId: string; estimate: number; sourceId: string; asOf: string;
+      sourceName: string; sourceUrl: string; grade: string | null; selfReported: number;
+    }>;
+  for (const { placeId, estimate, selfReported, ...p } of population) {
+    const item = facts.get(placeId) ?? { geography: null, population: null };
+    item.population = { estimate, provenance: { ...p, selfReported: !!selfReported } };
+    facts.set(placeId, item);
+  }
+  return facts;
+}
+
 export function getSource(db: DB, id: string) {
   return db.prepare("SELECT id, name, url, license, attribution, retrieved_at AS retrievedAt FROM source WHERE id = ?")
     .get(id) as { id: string; name: string; url: string; license: string | null; attribution: string | null; retrievedAt: string } | undefined;
@@ -731,7 +807,7 @@ export function conflictsFor(db: DB, personId: string): Conflict[] {
 
 export interface BillRow {
   id: string; jurisdiction: string; session: string; number: string; title: string; summary: string | null;
-  status: string; statusDetail: string | null; isLaw: boolean; chapter: string | null; url: string; textUrl: string | null;
+  status: string; statusDetail: string | null; isLaw: boolean | null; chapter: string | null; url: string; textUrl: string | null;
   introducedOn: string | null; provenance: Provenance;
 }
 
@@ -739,7 +815,7 @@ function billRow(db: DB, r: Record<string, unknown>): BillRow {
   return {
     id: r.id as string, jurisdiction: r.jurisdiction as string, session: r.session as string, number: r.number as string,
     title: r.title as string, summary: (r.summary as string) ?? null, status: r.status as string,
-    statusDetail: (r.status_detail as string) ?? null, isLaw: r.is_law === 1, chapter: (r.chapter as string) ?? null,
+    statusDetail: (r.status_detail as string) ?? null, isLaw: r.status === "unknown" ? null : r.is_law === 1, chapter: (r.chapter as string) ?? null,
     url: r.url as string, textUrl: (r.text_url as string) ?? null, introducedOn: (r.introduced_on as string) ?? null,
     provenance: provFor(db, r.source_id as string, r.as_of as string),
   };
@@ -760,7 +836,7 @@ export function listBills(db: DB, f: { jurisdiction?: string; status?: string; q
 export function getBill(db: DB, id: string) {
   const r = db.prepare("SELECT * FROM bill WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   if (!r) return null;
-  const sponsors = db.prepare("SELECT name, role FROM bill_sponsor WHERE bill_id = ? ORDER BY role, name").all(id) as Array<{ name: string; role: string }>;
+  const sponsors = db.prepare("SELECT name, role, person_id AS personId FROM bill_sponsor WHERE bill_id = ? ORDER BY role, name").all(id) as Array<{ name: string; role: string; personId: string | null }>;
   const actions = db.prepare("SELECT date, chamber, text FROM bill_action WHERE bill_id = ? ORDER BY date, rowid").all(id) as Array<{ date: string; chamber: string | null; text: string }>;
   return { ...billRow(db, r), sponsors, actions };
 }

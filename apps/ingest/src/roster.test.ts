@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openDb } from "@civic/db";
 import { personId } from "@civic/domain";
-import { loadRoster, parseGovernors, parsePositions, WIKIDATA, WIKIPEDIA } from "./roster.ts";
+import { ingestRoster, loadRoster, parseGovernors, parsePositions, WIKIDATA, WIKIPEDIA } from "./roster.ts";
 import { electionDay } from "./calendar.ts";
 
 const ROW = `|-
@@ -40,6 +40,27 @@ test("Wikidata rows without a start date or with a bare QID label are dropped", 
   });
   const r = parsePositions([row("Marco Rubio", "2025-01-21T00:00:00Z"), row("No Start"), row("Q99", "2025-01-21T00:00:00Z")]);
   assert.deepEqual(r.map((x) => [x.name, x.title, x.officeType]), [["Marco Rubio", "Secretary of State", "cabinet"]]);
+});
+
+test("excluding Wikipedia keeps Wikidata roster data without contacting Wikipedia", async (t) => {
+  const urls: string[] = [];
+  t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0]) => {
+    urls.push(String(input));
+    return Response.json({ results: { bindings: [{
+      p: { value: "http://www.wikidata.org/entity/Q1" }, pLabel: { value: "Example Person" },
+      posLabel: { value: "United States Secretary of State" }, start: { value: "2025-01-21T00:00:00Z" },
+    }] } });
+  });
+  const db = openDb(":memory:");
+  try {
+    await ingestRoster(db, { skipWikipedia: true });
+    assert.equal(urls.length, 1);
+    assert.match(urls[0], /^https:\/\/query\.wikidata\.org\//);
+    assert.ok(db.prepare("SELECT 1 FROM person WHERE canonical_name = 'Example Person'").get());
+    assert.equal(db.prepare("SELECT 1 FROM source WHERE id = 'wikipedia-en'").get(), undefined);
+  } finally {
+    db.close();
+  }
 });
 
 test("an official with an existing identifier keeps one profile and gains the term", () => {

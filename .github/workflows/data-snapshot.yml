@@ -1,0 +1,59 @@
+name: Publish data snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      rights_confirmed:
+        description: "I verified redistribution rights for every dataset in this public artifact"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: data-snapshot
+    timeout-minutes: 360
+    steps:
+      - name: Confirm redistribution rights
+        env:
+          RIGHTS_CONFIRMED: ${{ inputs.rights_confirmed }}
+        run: |
+          if [ "$RIGHTS_CONFIRMED" != "true" ]; then
+            echo "::error::Verify third-party redistribution rights before publishing a database artifact."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Ingest fresh data
+        env:
+          CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
+          FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
+          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
+          SKIP_VOTEVIEW: "1"
+          SKIP_UNREVIEWED_SOURCES: "1"
+        run: |
+          if [ -z "$CONGRESS_API_KEY" ] || [ -z "$FEC_API_KEY" ] || [ -z "$OPENSTATES_API_KEY" ]; then
+            echo "::error::CONGRESS_API_KEY, FEC_API_KEY and OPENSTATES_API_KEY are required for a deployment snapshot."
+            exit 1
+          fi
+          npm run ingest
+      - run: node --import tsx scripts/validate-deployment-db.ts data/civic.db
+      - name: Hash snapshot
+        run: cd data && sha256sum civic.db > civic.db.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: civic-lens-db
+          path: |
+            data/civic.db
+            data/civic.db.sha256
+          if-no-files-found: error
+          retention-days: 90

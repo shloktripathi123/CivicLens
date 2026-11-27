@@ -5,6 +5,10 @@ CREATE TABLE IF NOT EXISTS state_voting (
   state TEXT PRIMARY KEY, name TEXT NOT NULL, official_url TEXT NOT NULL,
   source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS state_voting_guide (
+  state TEXT PRIMARY KEY, url TEXT NOT NULL,
+  source_id TEXT NOT NULL REFERENCES source(id), as_of TEXT NOT NULL
+);
 `;
 
 export interface ElectionContest {
@@ -17,6 +21,11 @@ export interface ElectionRow {
 export function stateVotingLink(db: DatabaseSync, state: string) {
   return db.prepare("SELECT state, name, official_url AS officialUrl, source_id AS sourceId, as_of AS asOf FROM state_voting WHERE state = ?")
     .get(state) as { state: string; name: string; officialUrl: string; sourceId: string; asOf: string } | undefined;
+}
+
+export function stateVotingGuide(db: DatabaseSync, state: string) {
+  return db.prepare("SELECT url, source_id AS sourceId, as_of AS asOf FROM state_voting_guide WHERE state = ?")
+    .get(state) as { url: string; sourceId: string; asOf: string } | undefined;
 }
 
 export function electionsFor(db: DatabaseSync, state?: string): ElectionRow[] {

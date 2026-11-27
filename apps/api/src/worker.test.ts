@@ -40,6 +40,14 @@ const city = {
   source_id: "census-geography",
   as_of: "2025-01-01",
 };
+const countyFacts = {
+  geography: { landSqMi: 58, waterSqMi: 62, provenance: {
+    sourceId: "census-geography", sourceName: "Census", sourceUrl: "https://www.census.gov/", asOf: "2024-01-01", grade: "A", selfReported: false,
+  } },
+  population: { estimate: 800000, provenance: {
+    sourceId: "census-county-population", sourceName: "Census", sourceUrl: "https://www.census.gov/", asOf: "2024-07-01", grade: "A", selfReported: false,
+  } },
+};
 
 const personId = "73c63fc6-1885-579c-bfb0-8b2a651a6767";
 const race = {
@@ -56,6 +64,10 @@ const race = {
   candidates: [],
 };
 const personProfile = { person: { id: personId, name: "Ron Wyden" }, terms: [] };
+const candidateProfile = {
+  person: { id: personId, name: "Ron Wyden" },
+  deep: { sections: { bills: { status: "has_data", items: [{ title: "Test bill" }] }, votes: { status: "none_recorded", items: [] } } },
+};
 const governmentUnit = {
   id: "gu:county:MA:25025",
   kind: "county",
@@ -65,13 +77,14 @@ const governmentUnit = {
 };
 const personTimeline = [{ title: "Senator", body: "U.S. Senate" }];
 
-function mockEnv() {
+function mockEnv(hidden: string[] = []) {
   const db = {
     prepare(sql: string) {
       let params: Array<string | number | null> = [];
       return {
         bind(...values: Array<string | number | null>) { params = values; return this; },
         async all<T>() {
+          if (sql.includes("FROM correction_report")) return { results: hidden.map((target) => ({ target })) as T[], success: true };
           if (sql.includes("FROM bill b")) return { results: [bill] as T[], success: true };
           if (sql.includes("FROM place WHERE id=?") && params[0] === "state:MA") {
             return { results: [{ ...city, id: "state:MA", type: "state", name: "Massachusetts", label: "Massachusetts",
@@ -93,7 +106,10 @@ function mockEnv() {
           }
           return null;
         },
-        async run() { return { success: true, meta: { last_row_id: 1 } }; },
+        async run() {
+          if (sql.includes("INSERT INTO correction_report") && params[1] === "excluded-category") hidden.push(String(params[0]));
+          return { success: true, meta: { last_row_id: 1 } };
+        },
       };
     },
   };
@@ -125,12 +141,21 @@ function mockEnv() {
               parents: [], children: [], overlaps: [], states: ["MA"], lat: null, lon: null,
               provenance: null,
             },
+            "county:25025": {
+              place: { id: "county:25025", type: "county", name: "Suffolk", label: "Suffolk County",
+                state: "MA", stateName: "Massachusetts", approximate: false },
+              parents: [], children: [], overlaps: [], states: ["MA"], lat: null, lon: null,
+              provenance: null, countyFacts,
+            },
           },
         });
         if (path.endsWith("/places.json")) return Response.json({ items: [] });
         if (path.endsWith("/freshness.json")) return Response.json({ lastUpdated: "2025-01-01" });
         if (path.endsWith("/races.json")) return Response.json({ items: [race] });
-        if (path.endsWith("/calendars.json")) return Response.json({ OR: { state: "OR", elections: [] }, ALL: { elections: [] } });
+        if (path.endsWith("/calendars.json")) return Response.json({
+          OR: { state: "OR", today: "2000-01-01", past: [], upcoming: [{ date: "2000-01-01" }, { date: "2999-01-01" }] },
+          ALL: { state: null, today: "2000-01-01", past: [], upcoming: [] },
+        });
         if (path.endsWith("/government-index.json")) {
           return Response.json({ states: { [governmentUnit.id]: "MA" } });
         }
@@ -144,19 +169,41 @@ function mockEnv() {
         if (path.endsWith(`/profile-data-${personId.slice(0, 2)}.json.gz`)) {
           return new Response(gzipSync(Buffer.from(JSON.stringify({
             profiles: { [personId]: personProfile },
-            candidates: {},
+            candidates: { [personId]: candidateProfile },
             timelines: { [personId]: personTimeline },
           }))));
         }
         return new Response("{}", { status: 404 });
       },
     },
-  } as never;
+  };
 }
 
 async function get(path: string) {
   return worker.fetch(new Request(`https://civic-lens-api.test${path}`), mockEnv());
 }
+
+test("Cloudflare reports hide the reported item in detail and list responses", async () => {
+  const env = mockEnv();
+  const report = await worker.fetch(new Request("https://civic-lens-api.test/v1/reports", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ target: `https://civic-lens.test/races/${encodeURIComponent(race.id)}`, kind: "excluded-category", note: "Please review" }),
+  }), env);
+  assert.equal(report.status, 201);
+  assert.equal((await report.json() as { hidden: boolean }).hidden, true);
+  assert.equal((await worker.fetch(new Request(`https://civic-lens-api.test/v1/races/${encodeURIComponent(race.id)}`), env)).status, 451);
+  const list = await worker.fetch(new Request("https://civic-lens-api.test/v1/races"), env);
+  assert.deepEqual((await list.json() as { items: unknown[] }).items, []);
+});
+
+test("Cloudflare fails closed when pending reports cannot be checked", async () => {
+  const env = mockEnv();
+  env.DB.prepare = () => { throw new Error("D1 unavailable"); };
+  const response = await worker.fetch(new Request("https://civic-lens-api.test/v1/races"), env);
+  assert.equal(response.status, 503);
+  assert.match((await response.json() as { error: string }).error, /corrections/);
+});
 
 test("Cloudflare API serves bill list and detail pages from shared static data", async () => {
   const list = await get("/v1/bills?jurisdiction=OR&limit=1");
@@ -186,8 +233,15 @@ test("Cloudflare API serves a location detail page with explicit government leve
   assert.equal(page.completeness.sectionsTotal, 2);
 });
 
+test("Cloudflare API serves sourced county facts from static assets", async () => {
+  const response = await get(`/v1/places/${encodeURIComponent("county:25025")}`);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json() as { countyFacts: unknown }).countyFacts, countyFacts);
+});
+
 test("Cloudflare API validates bill, race, and calendar filters", async () => {
-  assert.equal((await get("/v1/bills?status=unknown")).status, 400);
+  assert.equal((await get("/v1/bills?status=invalid")).status, 400);
+  assert.equal((await get("/v1/bills?status=unknown")).status, 200);
   assert.equal((await get("/v1/races?state=invalid")).status, 400);
   assert.equal((await get("/v1/calendar?state=invalid")).status, 400);
 });
@@ -199,6 +253,9 @@ test("Cloudflare API serves profiles, races, and election calendars from static 
   const timeline = await get(`/v1/people/${personId}/timeline`);
   assert.equal(timeline.status, 200);
   assert.deepEqual(await timeline.json(), personTimeline);
+  const candidate = await get(`/v1/candidates/${personId}`);
+  assert.equal(candidate.status, 200);
+  assert.deepEqual(await candidate.json(), candidateProfile);
 
   const raceList = await get("/v1/races?state=OR&year=2026");
   assert.equal(raceList.status, 200);
@@ -210,7 +267,10 @@ test("Cloudflare API serves profiles, races, and election calendars from static 
 
   const calendar = await get("/v1/calendar?state=OR");
   assert.equal(calendar.status, 200);
-  assert.deepEqual(await calendar.json(), { state: "OR", elections: [] });
+  assert.deepEqual(await calendar.json(), {
+    state: "OR", today: new Date().toISOString().slice(0, 10),
+    past: [{ date: "2000-01-01" }], upcoming: [{ date: "2999-01-01" }],
+  });
   const freshness = await get("/v1/meta/freshness");
   assert.equal(freshness.status, 200);
   assert.deepEqual(await freshness.json(), { lastUpdated: "2025-01-01" });

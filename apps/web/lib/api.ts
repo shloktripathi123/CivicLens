@@ -14,10 +14,11 @@ export interface Candidacy {
 export interface Provenance { sourceId?: string; grade?: string | null; selfReported?: boolean; sourceName: string; sourceUrl: string; asOf: string }
 export interface Term {
   title: string; body: string; party: string | null; state: string | null; district: string | null;
-  start: string; end: string | null; provenance: Provenance;
+  start: string | null; end: string | null; provenance: Provenance;
 }
 export interface DeepItem {
   title: string; detail: string | null; date: string | null; publisher: string | null; url: string | null; provenance: Provenance;
+  billId?: string | null;
 }
 export interface DeepSlot { lookups?: Array<{ label: string; url: string }>; status: "has_data" | "none_recorded"; items: DeepItem[]; checked: string }
 export type DeepKey = "affiliations" | "bills" | "votes" | "projects" | "funding" | "ratings";
@@ -51,6 +52,7 @@ export interface Race {
   status: string; ordering: string; candidates: RaceCandidate[];
 }
 export interface CandidateProfile {
+  deep?: DeepProfile | null;
   conflicts?: import("@/components/Conflict").ConflictDto[];
   person: Person;
   candidacy: Candidacy & { website: string | null; filedOn: string | null; provenance: Provenance };
@@ -86,6 +88,10 @@ export interface PlacePage {
   overlaps: Array<{ place: PlaceSummary; relation: string; share: number | null }>;
   levels: PlaceLevel[]; completeness: { sectionsWithData: number; sectionsTotal: number; rule: string };
   states: string[]; cityCount?: number; cityNote?: string;
+  countyFacts?: {
+    geography: { landSqMi: number; waterSqMi: number; provenance: Provenance } | null;
+    population: { estimate: number; provenance: Provenance } | null;
+  } | null;
   provenance: Provenance | null;
 }
 export const PLACE_TYPE_LABEL: Record<PlaceSummary["type"], string> = { state: "State", county: "County", city: "City / town", zip: "ZIP (approximate)" };
@@ -93,14 +99,15 @@ export const placeHref = (id: string) => `/places/${encodeURIComponent(id)}`;
 
 export interface Bill {
   id: string; jurisdiction: string; session: string; number: string; title: string; summary: string | null;
-  status: string; statusDetail: string | null; isLaw: boolean; chapter: string | null; url: string; textUrl: string | null;
+  status: string; statusDetail: string | null; isLaw: boolean | null; chapter: string | null; url: string; textUrl: string | null;
   introducedOn: string | null; provenance: Provenance;
 }
 export interface BillDetail extends Bill {
-  sponsors: Array<{ name: string; role: string }>;
+  sponsors: Array<{ name: string; role: string; personId?: string | null }>;
   actions: Array<{ date: string; chamber: string | null; text: string }>;
 }
 export const BILL_STATUS_LABEL: Record<string, string> = {
+  unknown: "Status not verified",
   introduced: "Proposed — introduced", in_committee: "Proposed — in committee", passed_one_chamber: "Proposed — passed one chamber",
   passed_both: "Passed both chambers (not yet law)", enacted: "Enacted into law", vetoed: "Vetoed", failed: "Failed or died", withdrawn: "Withdrawn",
 };

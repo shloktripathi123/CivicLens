@@ -81,18 +81,28 @@ async function loadTrimet(db: DB, asOf: string) {
   }
 }
 
-export async function ingestLocalGov(db: DB): Promise<number> {
-  upsertSource(db, SRC_SEED);
+export async function ingestLocalGov(db: DB, { skipCurated = false }: { skipCurated?: boolean } = {}): Promise<number> {
+  if (!skipCurated) {
+    upsertSource(db, SRC_SEED);
+    loadSeeds(db, JSON.parse(readFileSync(SEED, "utf8")));
+    await loadTrimet(db, new Date().toISOString().slice(0, 10));
+  } else {
+    console.log("Curated local-government data skipped.");
+  }
   upsertSource(db, SRC_SD);
-  const asOf = new Date().toISOString().slice(0, 10);
-  loadSeeds(db, JSON.parse(readFileSync(SEED, "utf8")));
-  await loadTrimet(db, asOf);
   const rows = await gazetteer("2024_Gaz_unsd_national");
+  return loadSchoolDistricts(db, rows);
+}
+
+export function loadSchoolDistricts(db: DB, rows: Array<Record<string, string>>): number {
   const ins = db.prepare("INSERT OR IGNORE INTO gov_unit (id,kind,name,state,fips,function,source_id,as_of) VALUES (?,?,?,?,?,?,?,?)");
   let n = 0;
   for (const r of rows) {
-    if (!r.GEOID) continue;
-    ins.run(`sd:${r.GEOID}`, "school_district", r.NAME, r.USPS, r.GEOID, "Public school district", SRC_SD.id, asOf);
+    if (!r.GEOID || !r.NAME || !r.USPS) {
+      console.warn("Census school district row missing an identifier, name, or state; skipped.");
+      continue;
+    }
+    ins.run(`sd:${r.GEOID}`, "school_district", r.NAME, r.USPS, r.GEOID, "Public unified school district", SRC_SD.id, "2024-01-01");
     n++;
   }
   return n;

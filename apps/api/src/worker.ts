@@ -2,6 +2,7 @@ import {
   BILL_STATUSES, CRITERIA, GRADE_MEANING, RUBRIC_VERSION,
   nicknameVariants, parsePlaceQuery, scoreName, stateByFips, stateByUsps, tokens,
 } from "@civic/domain";
+import { reportTarget, sanitize } from "./exclusions.ts";
 
 function fuzzyPatterns(token: string): string[] {
   const patterns = new Set([token, ...nicknameVariants(token)]);
@@ -118,7 +119,7 @@ interface BillAsset {
   summary: string | null;
   status: string;
   statusDetail: string | null;
-  isLaw: boolean;
+  isLaw: boolean | null;
   chapter: string | null;
   url: string;
   textUrl: string | null;
@@ -147,6 +148,10 @@ interface PlaceAssetRecord {
   states: string[];
   lat: number | null;
   lon: number | null;
+  countyFacts?: {
+    geography: { landSqMi: number; waterSqMi: number; provenance: PlaceAssetRecord["provenance"] } | null;
+    population: { estimate: number; provenance: PlaceAssetRecord["provenance"] } | null;
+  } | null;
   provenance: { sourceId: string; sourceName: string; sourceUrl: string; asOf: string; grade: string | null; selfReported: boolean } | null;
 }
 
@@ -268,7 +273,7 @@ function summary(row: SearchRow) {
 
 const SEARCH_SELECT = `
   SELECT p.id, pn.name_norm AS nameNorm, p.status,
-    COALESCE(t.level, 'federal') AS level, COALESCE(t.body, '') AS body, t.state, t.party,
+    COALESCE(t.level, o.level, 'federal') AS level, COALESCE(t.body, '') AS body, t.state, t.party,
     CAST(COALESCE((SELECT MIN(substr(start_date,1,4)) FROM office_term WHERE person_id=p.id), '9999') AS INTEGER) AS startYear,
     CAST((SELECT MAX(substr(COALESCE(end_date,'9999'),1,4)) FROM office_term WHERE person_id=p.id) AS INTEGER) AS endYear,
     COALESCE((SELECT group_concat(DISTINCT body) FROM office_term WHERE person_id=p.id), '') AS bodies,
@@ -371,7 +376,7 @@ function passesSnapshot(meta: SearchSnapshot["people"][string]["meta"], filters:
   if (party && !meta.parties.toLowerCase().includes(party)) return false;
   if (officeType && !meta.officeTypes.split(",").includes(officeType)) return false;
   if (role === "candidate" && !meta.candidate) return false;
-  if (role === "official" && meta.startYear === 9999) return false;
+  if (role === "official" && !meta.bodies) return false;
   if (filters.has("year") && (!Number.isInteger(year) || meta.startYear > year || (meta.endYear !== null && year > meta.endYear))) return false;
   if (filters.has("election_year") && meta.electionYear !== electionYear) return false;
   return true;
@@ -931,6 +936,7 @@ async function placePage(env: Env, origin: string, id: string): Promise<Response
     states: stateCodes,
     lat: record.lat,
     lon: record.lon,
+    countyFacts: record.countyFacts ?? null,
     provenance: record.provenance,
     ...(record.place.type === "state" ? {
       cityCount: basePack.cityCount,
@@ -1167,7 +1173,7 @@ function exclusionsPage(): Response {
   });
 }
 
-export default {
+const router = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") {
@@ -1218,10 +1224,17 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/exclusions") return exclusionsPage();
       if (request.method === "GET" && url.pathname === "/v1/calendar") {
         const state = url.searchParams.get("state");
-        if (state && !/^[A-Za-z]{2}$/.test(state)) return json({ error: "state must be a 2-letter code" }, 400);
-        const data = await searchAsset<Record<string, unknown>>(env, url.origin, "/calendars.json");
+        if (state !== null && !/^[A-Za-z]{2}$/.test(state)) return json({ error: "state must be a 2-letter code" }, 400);
+        const data = await searchAsset<Record<string, { today: string; upcoming: Array<{ date: string }>; past: Array<{ date: string }> }>>(env, url.origin, "/calendars.json");
         const calendar = data[state?.toUpperCase() ?? "ALL"];
-        return calendar ? json(calendar) : json({ error: "not found" }, 404);
+        if (!calendar) return json({ error: "not found" }, 404);
+        const today = new Date().toISOString().slice(0, 10);
+        const elections = [...calendar.past, ...calendar.upcoming].sort((a, b) => a.date.localeCompare(b.date));
+        return json({
+          ...calendar, today,
+          upcoming: elections.filter((e) => e.date >= today),
+          past: elections.filter((e) => e.date < today),
+        });
       }
       if (request.method === "GET" && url.pathname === "/v1/sources") {
         return await searchAsset(env, url.origin, "/sources.json").then((data) => json(data));
@@ -1254,13 +1267,16 @@ export default {
       }
       if (request.method === "POST" && url.pathname === "/v1/reports") {
         const body = await request.json().catch(() => null) as { target?: unknown; kind?: unknown; note?: unknown } | null;
-        if (!body || typeof body.target !== "string" || body.target.length > 200 ||
+        if (!body || typeof body.target !== "string" || !body.target.trim() || body.target.length > 200 ||
           typeof body.note !== "string" || !body.note || body.note.length > 2000 ||
           typeof body.kind !== "string" || !["excluded-category", "factual-error", "rating"].includes(body.kind)) {
           return json({ error: "target, kind (excluded-category, factual-error, rating) and note are required" }, 400);
         }
+        const target = reportTarget(body.target);
+        if (body.kind === "excluded-category" && !target) return json({ error: "Provide an item ID or a supported page address." }, 400);
         const result = await env.DB.prepare(`INSERT INTO correction_report (target,kind,note,created_at)
-          VALUES (?,?,?,?)`).bind(body.target, body.kind, body.note, new Date().toISOString()).run();
+          VALUES (?,?,?,?)`).bind(target ?? body.target, body.kind, body.note, new Date().toISOString()).run();
+        if (!result.success) throw new Error("Could not save report");
         return json({ id: result.meta.last_row_id, status: "pending", hidden: body.kind === "excluded-category" }, 201);
       }
       const timelineMatch = url.pathname.match(/^\/v1\/people\/([0-9a-f-]{36})\/timeline$/);
@@ -1282,6 +1298,30 @@ export default {
         }, 503);
       }
       return json({ error: "Search is temporarily unavailable. Please try again in a moment." }, 503);
+    }
+  },
+};
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "GET" || !new URL(request.url).pathname.startsWith("/v1/")) {
+      return router.fetch(request, env);
+    }
+    try {
+      const reports = await env.DB.prepare(
+        "SELECT target FROM correction_report WHERE status = 'pending' AND kind = 'excluded-category'",
+      ).all<{ target: string }>();
+      if (!reports.success) throw new Error("Could not load pending correction reports");
+      const hidden = new Set(reports.results.map((r) => reportTarget(r.target)).filter((id): id is string => id !== null));
+      const path = new URL(request.url).pathname;
+      const id = path === "/v1/places/search" || path === "/v1/places/suggest" ? null : reportTarget(path);
+      if (id && hidden.has(id)) return json({ error: "This item is hidden while a report is reviewed." }, 451);
+      const response = await router.fetch(request, env);
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return response;
+      return json(sanitize(await response.json(), hidden), response.status);
+    } catch (error) {
+      console.error("Could not enforce pending corrections", error);
+      return json({ error: "Data is temporarily unavailable while corrections are checked." }, 503);
     }
   },
 };

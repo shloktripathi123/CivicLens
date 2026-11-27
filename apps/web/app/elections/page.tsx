@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/api";
+import FilterableList from "@/components/FilterableList";
 
 export const metadata = { title: "Elections and voting — Civic Lens" };
 
@@ -7,7 +8,7 @@ interface Win { id: number; kind: string; startDate: string | null; endDate: str
 interface Election { windows?: Win[]; id: string; date: string; type: string; jurisdiction: string; labelText: string; contests: Contest[]; asOf: string }
 interface Calendar {
   today: string; state: string | null; upcoming: Election[]; past: Election[];
-  voterInfo: { stateOffice: { name: string; url: string; asOf: string } | null; registerUrl: string; personalBallot: string };
+  voterInfo: { stateOffice: { name: string; url: string; asOf: string } | null; votingGuide: { url: string; asOf: string } | null; registerUrl: string; personalBallot: string };
   notInOurData: string[]; coverage: string;
 }
 
@@ -36,24 +37,22 @@ function ElectionBlock({ e }: { e: Election }) {
         </ul>
       ) : <p className="na">Registration, mail-in ballot and drop-box dates are not yet published here for this election. Use the official election office link above or <a href="https://www.usa.gov/register-to-vote">USA.gov</a> for your exact deadlines.</p>}
       <h3>Offices on the ballot</h3>
-      <ul className="results">
-        {e.contests.map((c) => (
-          <li key={c.raceId}>
+      <FilterableList label={`${e.jurisdiction} ${e.date} offices`} listClassName="results" pageSize={15} items={e.contests.map((c) => ({
+        id: c.raceId, text: `${c.office} ${c.level}`, content: (
             <a className="card" href={`/races/${encodeURIComponent(c.raceId)}`}>
               <span><span className="name">{c.office}</span><br />
                 <span className="meta">{CONTEST_TEXT[c.label]} · {c.candidates > 0 ? `${c.candidates} candidate${c.candidates === 1 ? "" : "s"}. ` : ""}{c.note}</span></span>
             </a>
-          </li>
-        ))}
-      </ul>
+        ),
+      }))} />
     </section>
   );
 }
 
 export default async function ElectionsPage({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
   const { state } = await searchParams;
-  const res = await fetch(`${API_URL}/v1/calendar${state ? `?state=${encodeURIComponent(state)}` : ""}`, { cache: "no-store" });
-  const cal: Calendar | null = res.ok ? await res.json() : null;
+  const res = await fetch(`${API_URL}/v1/calendar${state ? `?state=${encodeURIComponent(state)}` : ""}`, { cache: "no-store" }).catch(() => null);
+  const cal: Calendar | null = res?.ok ? await res.json() : null;
   return (
     <article>
       <h1>Elections and voting</h1>
@@ -61,15 +60,17 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
       <form className="filters" method="get">
         <label>State (e.g. OR)<input name="state" maxLength={2} defaultValue={state} /></label>
         <button type="submit">Show</button>
+        {state && <a href="/elections">Clear state</a>}
       </form>
-      {!cal && <p className="empty" role="alert">{res.status === 400 ? "Enter a 2-letter state code." : "The calendar is unavailable right now."}</p>}
+      {!cal && <p className="empty" role="alert">{res?.status === 400 || res?.status === 404 ? "Enter a valid 2-letter state or territory code." : "The calendar is unavailable right now."}</p>}
       {cal && (
         <>
           <section className="block" aria-labelledby="how-h">
             <h2 id="how-h">Register and vote{cal.state ? ` in ${cal.state}` : ""}</h2>
             <p className="src">Three kinds of information appear here and are never mixed: a scheduled date, a confirmed contest with filed candidates, and your personal ballot, which we do not generate.</p>
             <ul className="plain">
-              <li><a href={cal.voterInfo.registerUrl}>Register to vote (USA.gov)</a></li>
+              <li><a href={cal.voterInfo.registerUrl}>Voter registration information (Vote.gov)</a></li>
+              {cal.voterInfo.votingGuide && <li><a href={cal.voterInfo.votingGuide.url}>State voting guide (U.S. Election Assistance Commission)</a> <span className="meta">· Directory link checked {cal.voterInfo.votingGuide.asOf}. Find local election offices, voting options and registration information; verify deadlines with state or local officials.</span></li>}
               {cal.voterInfo.stateOffice
                 ? <li><a href={cal.voterInfo.stateOffice.url}>{cal.voterInfo.stateOffice.name} official election office</a> <span className="meta">· USA.gov directory, as of {cal.voterInfo.stateOffice.asOf}. Use it for your sample ballot, voter lookup and deadlines.</span></li>
                 : <li className="meta">Choose a state to see its official election office.</li>}
@@ -81,12 +82,18 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
 
           <h2>Upcoming</h2>
           {cal.upcoming.length === 0 && <p className="empty">No upcoming elections in our data{cal.state ? ` for ${cal.state}` : ""}.</p>}
-          {cal.upcoming.map((e) => <ElectionBlock key={e.id} e={e} />)}
+          <FilterableList label="upcoming elections" listClassName="plain" pageSize={8} items={cal.upcoming.map((e) => ({
+            id: e.id, text: `${e.jurisdiction} ${e.date} ${e.type} ${e.contests.map((c) => c.office).join(" ")}`,
+            content: <ElectionBlock e={e} />,
+          }))} />
 
           {cal.past.length > 0 && (
             <>
               <h2>Past</h2>
-              {cal.past.map((e) => <ElectionBlock key={e.id} e={e} />)}
+              <FilterableList label="past elections" listClassName="plain" pageSize={8} items={cal.past.map((e) => ({
+                id: e.id, text: `${e.jurisdiction} ${e.date} ${e.type} ${e.contests.map((c) => c.office).join(" ")}`,
+                content: <ElectionBlock e={e} />,
+              }))} />
             </>
           )}
           <p className="src">{cal.coverage}</p>

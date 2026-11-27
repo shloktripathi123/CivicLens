@@ -23,12 +23,14 @@ export default function CredibilityBadge({ sourceId, grade, selfReported }: { so
   async function open() {
     ref.current?.showModal();
     if (data) return;
+    setErr(false);
     try {
       const [s, r] = await Promise.all([
-        fetch(`${API_URL}/v1/sources/${encodeURIComponent(sourceId)}`).then((x) => x.json()),
-        fetch(`${API_URL}/v1/rubric`).then((x) => x.json()),
+        fetch(`${API_URL}/v1/sources/${encodeURIComponent(sourceId)}`),
+        fetch(`${API_URL}/v1/rubric`),
       ]);
-      setData({ s, r });
+      if (!s.ok || !r.ok) throw new Error("Grading details unavailable");
+      setData({ s: await s.json(), r: await r.json() });
     } catch { setErr(true); }
   }
 

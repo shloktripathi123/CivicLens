@@ -10,8 +10,8 @@ import { getGovUnit } from "@civic/db";
 import { buildPlacePage } from "./placePage.ts";
 import { districtsAt } from "./districts.ts";
 import { getPlaceRow, listSources, getSourceRecord, addReport, conflictsFor, linkStatus, hiddenTargets } from "@civic/db";
-import { EXCLUSIONS, sanitize } from "./exclusions.ts";
-import { BILL_STATUSES, isZip, RUBRIC_VERSION, CRITERIA, GRADE_MEANING, type PlaceType } from "@civic/domain";
+import { EXCLUSIONS, reportTarget, sanitize } from "./exclusions.ts";
+import { BILL_STATUSES, isZip, stateByUsps, RUBRIC_VERSION, CRITERIA, GRADE_MEANING, type PlaceType } from "@civic/domain";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -20,15 +20,16 @@ const OFFICE_TYPES = ["president", "vice_president", "cabinet", "senate", "house
 export function buildApp(db: DB = openDb()) {
   const app = Fastify({ logger: false });
   const index = new SearchIndex(db);
+  const hidden = () => new Set([...hiddenTargets(db)].map(reportTarget).filter((id): id is string => id !== null));
 
   // Every JSON response passes through the exclusion filter (FR-025) and drops items hidden pending a report (FR-026).
   app.addHook("preHandler", async (req, reply) => {
     const id = (req.params as { id?: string } | undefined)?.id;
-    if (id && hiddenTargets(db).has(id)) return reply.code(451).send({ error: "This item is hidden while a report is reviewed." });
+    if (id && hidden().has(id)) return reply.code(451).send({ error: "This item is hidden while a report is reviewed." });
   });
   app.addHook("onSend", async (_req, reply, payload) => {
     if (typeof payload !== "string" || !String(reply.getHeader("content-type") ?? "").includes("application/json")) return payload;
-    return JSON.stringify(sanitize(JSON.parse(payload), hiddenTargets(db)));
+    return JSON.stringify(sanitize(JSON.parse(payload), hidden()));
   });
   const places = new PlaceIndex(db);
   const suggestCache = new Map<string, unknown>();
@@ -85,7 +86,7 @@ export function buildApp(db: DB = openDb()) {
   app.get<{ Params: { id: string } }>("/v1/candidates/:id", async (req, reply) => {
     if (!UUID.test(req.params.id)) return reply.code(404).send({ error: "not found" });
     const c = getCandidate(db, req.params.id);
-    return c ? { ...c, conflicts: conflictsFor(db, req.params.id) } : reply.code(404).send({ error: "not found" });
+    return c ? { ...c, deep: getDeepProfile(db, req.params.id), conflicts: conflictsFor(db, req.params.id) } : reply.code(404).send({ error: "not found" });
   });
 
   app.get<{ Querystring: { jurisdiction?: string; status?: string; q?: string; limit?: string; offset?: string } }>("/v1/bills", async (req, reply) => {
@@ -153,10 +154,12 @@ export function buildApp(db: DB = openDb()) {
 
   app.post<{ Body: { target?: string; kind?: string; note?: string } }>("/v1/reports", async (req, reply) => {
     const { target, kind, note } = req.body ?? {};
-    if (!target || target.length > 200 || !note || note.length > 2000 || !["excluded-category", "factual-error", "rating"].includes(kind ?? "")) {
+    if (!target?.trim() || target.length > 200 || !note || note.length > 2000 || !["excluded-category", "factual-error", "rating"].includes(kind ?? "")) {
       return reply.code(400).send({ error: "target, kind (excluded-category, factual-error, rating) and note are required" });
     }
-    const id = addReport(db, { target, kind: kind!, note });
+    const normalized = reportTarget(target);
+    if (kind === "excluded-category" && !normalized) return reply.code(400).send({ error: "Provide an item ID or a supported page address." });
+    const id = addReport(db, { target: normalized ?? target, kind: kind!, note });
     return reply.code(201).send({ id, status: "pending", hidden: kind === "excluded-category" });
   });
 
@@ -190,6 +193,7 @@ export function buildApp(db: DB = openDb()) {
   app.get<{ Querystring: { state?: string } }>("/v1/calendar", async (req, reply) => {
     const st = req.query.state;
     if (st !== undefined && !/^[A-Za-z]{2}$/.test(st)) return reply.code(400).send({ error: "state must be a 2-letter code" });
+    if (st !== undefined && !stateByUsps(st)) return reply.code(404).send({ error: "not found" });
     return buildCalendar(db, st);
   });
 

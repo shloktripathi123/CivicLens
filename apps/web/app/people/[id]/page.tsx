@@ -5,7 +5,7 @@ import DeepRecord from "@/components/DeepRecord";
 import { API_URL, describe, type Profile, type Provenance } from "@/lib/api";
 
 async function load(id: string): Promise<Profile | null> {
-  const res = await fetch(`${API_URL}/v1/people/${id}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${API_URL}/v1/people/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
@@ -42,7 +42,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
     <article>
       <div className="profile-head">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={person.photoUrl ?? ""} alt={`Official portrait of ${person.name}`} />
+        {person.photoUrl && <img src={person.photoUrl} alt={`Official portrait of ${person.name}`} />}
         <div>
           <h1>{person.name} <span className="chip">{person.status === "current" ? "Current" : "Former"}</span></h1>
           <p className="lead">{describe(person)} · {person.years}</p>
@@ -50,6 +50,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             <p><a href={`/candidates/${id}`}>Candidate for {person.candidacy.office} ({person.candidacy.electionYear}) — view candidate profile</a></p>
           )}
           <p className="src">Data last updated {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString() : "unknown"}</p>
+          <nav aria-label="Profile sections" className="src">
+            Jump to: <a href="#terms">Offices</a> · <a href="#comm">Committees</a> · <a href="#contact">Contact</a> · <a href="#deep-h">Full record</a>
+          </nav>
         </div>
       </div>
 
@@ -60,7 +63,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             <li key={k} className={v}>{SECTION_LABELS[k] ?? k}: {v}</li>
           ))}
         </ul>
-        <p className="src">Bills, votes, funding and ratings are not yet available and are being added.</p>
+        <p className="src">Coverage varies by person and source. See the full record below for available details.</p>
       </section>
 
       <section className="block" aria-labelledby="terms">
@@ -73,7 +76,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 <td>{t.title}<br /><span className="src">{t.body}</span></td>
                 <td>{t.state}{t.district ? ` · ${t.district}` : ""}</td>
                 <td>{t.party ?? <span className="na">Not available</span>}</td>
-                <td>{t.start.slice(0, 10)} → {t.end ? t.end.slice(0, 10) : "present"}</td>
+                <td>{t.start ? t.start.slice(0, 10) : "Start not provided"} → {t.end ? t.end.slice(0, 10) : "present"}</td>
               </tr>
             ))}
           </tbody>
