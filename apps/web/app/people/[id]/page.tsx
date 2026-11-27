@@ -50,6 +50,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             <p><a href={`/candidates/${id}`}>Candidate for {person.candidacy.office} ({person.candidacy.electionYear}) — view candidate profile</a></p>
           )}
           <p className="src">Data last updated {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString() : "unknown"}</p>
+          <nav aria-label="Profile sections" className="src">
+            Jump to: <a href="#terms">Offices</a> · <a href="#comm">Committees</a> · <a href="#contact">Contact</a> · <a href="#deep-h">Full record</a>
+          </nav>
         </div>
       </div>
 

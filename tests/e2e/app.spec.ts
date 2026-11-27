@@ -81,6 +81,9 @@ test("office type and body filters include candidates and state officials", asyn
   await expect(page.getByRole("link", { name: /Morgan Example/ })).toBeVisible();
   await page.getByLabel("Office type").selectOption("governor");
   await expect(page.getByText("Nothing matches")).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByLabel("Search for a person by name")).toHaveValue("Example");
+  await expect(page.getByRole("link", { name: /Taylor Example/ })).toBeVisible();
 });
 
 test("clearing a search removes its pagination and results", async ({ page }) => {
@@ -142,6 +145,7 @@ test("service errors give recovery options without reporting zero bills", async 
 test("race, bill, election and place navigation", async ({ page }) => {
   await page.goto("/races");
   await page.getByLabel("State (e.g. OR)").fill("OR");
+  await page.getByLabel("Office").fill("State Senator");
   await page.getByRole("button", { name: "Filter" }).click();
   await page.getByRole("link", { name: /State Senator/ }).click();
   await page.getByRole("link", { name: /Jordan Example/ }).click();
@@ -155,7 +159,8 @@ test("race, bill, election and place navigation", async ({ page }) => {
 
   await page.goto("/elections");
   await page.getByLabel("State (e.g. OR)").fill("OR");
-  await page.getByRole("button", { name: "Show" }).click();
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+  await page.getByLabel("Filter OR 2099-11-03 offices").fill("State Senator");
   await expect(page.getByRole("link", { name: /State Senator/ })).toBeVisible();
 
   await page.goto("/places");
@@ -170,6 +175,7 @@ test("race, bill, election and place navigation", async ({ page }) => {
 test("bills can be filtered outside Oregon without claiming an unverified law status", async ({ page }) => {
   await page.goto("/bills");
   await page.getByLabel("State (e.g. OR)").fill("CA");
+  await page.getByLabel("Search bills").fill("California example");
   await page.getByRole("button", { name: "Filter" }).click();
   await expect(page.getByRole("link", { name: /HB 1000/ })).toHaveCount(0);
   await page.getByRole("link", { name: /AB 20/ }).click();
@@ -214,6 +220,79 @@ test("candidate and bill pages show sourced records without inventing votes or i
   await expect(page.getByRole("link", { name: "Jordan Example" })).toHaveAttribute("href", `/people/${candidate}`);
   await expect(page.getByText("Unmatched Sponsor")).toBeVisible();
   await expect(page.getByText(/do not necessarily|not necessarily its final effects/)).toBeVisible();
+});
+
+test("long lists can be filtered and expanded without losing results", async ({ page }) => {
+  await page.goto("/places");
+  await page.getByLabel("Filter states and territories").fill("Oregon");
+  await expect(page.getByRole("link", { name: "Oregon", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "California", exact: true })).toHaveCount(0);
+
+  await page.goto("/places/state%3AOR");
+  await expect(page.getByRole("link", { name: "Research County 35" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Show more counties" }).click();
+  await expect(page.getByRole("link", { name: "Research County 35" })).toBeVisible();
+  await page.getByLabel("Filter counties").fill("Research County 35");
+  await expect(page.getByRole("link", { name: "Research County 35" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Research County 01" })).toHaveCount(0);
+  await page.getByLabel("Filter counties").fill("no such county");
+  await expect(page.getByText("No counties match this filter.")).toBeVisible();
+
+  await page.goto("/places/county%3A41001");
+  await page.getByLabel("Filter overlapping places").fill("97065");
+  await expect(page.getByRole("link", { name: "ZIP 97065" })).toBeVisible();
+
+  await page.goto("/races?state=OR&office=Research");
+  await expect(page.getByRole("link", { name: /Research office 32/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Show more races" }).click();
+  await expect(page.getByRole("link", { name: /Research office 32/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/races");
+
+  await page.goto("/elections?state=OR");
+  await page.getByLabel("Filter OR 2099-11-03 offices").fill("Research office 32");
+  await expect(page.getByRole("link", { name: /Research office 32/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Clear state" })).toHaveAttribute("href", "/elections");
+
+  await page.goto(`/candidates/${candidate}`);
+  await page.getByLabel("Filter sponsored legislation records").fill("Research bill 12");
+  await expect(page.getByRole("link", { name: "Research bill 12" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Research bill 01" })).toHaveCount(0);
+});
+
+test("long lists remain accessible without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/places/state%3AOR");
+  await expect(page.getByRole("link", { name: "Research County 01" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Research County 35" })).toBeVisible();
+  await context.close();
+});
+
+test("bill pagination preserves filters in both directions", async ({ page }) => {
+  await page.goto("/bills?state=CA&q=Research");
+  await expect(page.getByText("Showing 1–25 of 32 bills.")).toBeVisible();
+  await page.getByRole("link", { name: "Next page" }).click();
+  await expect(page.getByText("Showing 26–32 of 32 bills.")).toBeVisible();
+  await expect(page.getByLabel("State (e.g. OR)")).toHaveValue("CA");
+  await expect(page.getByLabel("Search bills")).toHaveValue("Research");
+  await page.getByRole("link", { name: "Previous page" }).click();
+  await expect(page.getByText("Showing 1–25 of 32 bills.")).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page.getByLabel("State (e.g. OR)")).toHaveValue("");
+  await page.goto("/bills?offset=not-a-number");
+  await expect(page.getByRole("alert").filter({ hasText: "Invalid page offset" })).toBeVisible();
+  await page.getByRole("link", { name: "Clear filters" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Invalid page offset" })).toHaveCount(0);
+});
+
+test("location filters work by keyboard on a narrow screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/places/state%3AOR");
+  await page.getByLabel("Filter counties").focus();
+  await page.keyboard.type("Research County 35");
+  await expect(page.getByRole("link", { name: "Research County 35" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Research County 01" })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test("credibility dialog handles success and service errors", async ({ page }) => {

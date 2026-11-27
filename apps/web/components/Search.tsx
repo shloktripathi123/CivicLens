@@ -113,6 +113,9 @@ export default function Search({ peopleOnly = false }: { peopleOnly?: boolean })
           <label>State (e.g. MA)
             <input value={state} maxLength={2} onChange={(e) => setState(e.target.value)} />
           </label>
+          {(level || body || status || state || officeType) && <button type="button" onClick={() => {
+            setLevel(""); setBody(""); setStatus(""); setState(""); setOfficeType("");
+          }}>Clear filters</button>}
         </div>
       </form>
 

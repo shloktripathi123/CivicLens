@@ -29,6 +29,8 @@ Candidate pages show available sourced sponsorship and voting records, not an
 endorsement or a complete voting history. State bill sponsors are linked to
 profiles only when Open States provides a matching person identifier. Bill
 summaries describe proposals; they do not establish measured impacts.
+Use the list filters and "Show more" controls to navigate long place, race,
+election and profile-record lists; bill search supports previous and next pages.
 
 ## Local development
 

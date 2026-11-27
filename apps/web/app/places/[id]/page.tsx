@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Cite from "@/components/Cite";
 import LocalGovernment from "@/components/LocalGovernment";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import FilterableList from "@/components/FilterableList";
 import { API_URL, PLACE_TYPE_LABEL, describe, placeHref, type PlaceLevel, type PlacePage, type SectionState } from "@/lib/api";
 
 type PlaceLoadResult = { kind: "loaded"; page: PlacePage } | { kind: "not-found" } | { kind: "unavailable" };
@@ -42,46 +43,28 @@ function Level({ l }: { l: PlaceLevel }) {
       {l.officials.length > 0 && (
         <>
           <h3>Officials ({l.officials.length})</h3>
-          <ul className="results">
-            {l.officials.slice(0, 6).map((p) => (
-              <li key={p.id}>
+          <FilterableList label={`${l.level} officials`} listClassName="results" pageSize={6} items={l.officials.map((p) => ({
+            id: p.id, text: `${p.name} ${describe(p)}`, content: (
                 <a className="card" href={`/people/${p.id}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {p.photoUrl ? <img className="avatar" src={p.photoUrl} alt="" loading="lazy" /> : <span className="avatar" />}
                   <span><span className="name">{p.name}</span><br /><span className="meta">{describe(p)}</span></span>
                 </a>
-              </li>
-            ))}
-          </ul>
-          {l.officials.length > 6 && (
-            <details>
-              <summary>Show {l.officials.length - 6} more</summary>
-              <ul className="results">
-                {l.officials.slice(6).map((p) => (
-                  <li key={p.id}>
-                    <a className="card" href={`/people/${p.id}`}>
-                      <span><span className="name">{p.name}</span><br /><span className="meta">{describe(p)}</span></span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+            ),
+          }))} />
         </>
       )}
       {l.races.length > 0 && (
         <>
           <h3>Races</h3>
-          <ul className="results">
-            {l.races.map((r) => (
-              <li key={r.id}>
+          <FilterableList label={`${l.level} races`} listClassName="results" items={l.races.map((r) => ({
+            id: r.id, text: `${r.office} ${r.electionDate}`, content: (
                 <a className="card" href={`/races/${encodeURIComponent(r.id)}`}>
                   <span><span className="name">{r.office}</span><br />
                     <span className="meta">{r.electionDate} · {r.candidates.length} candidate{r.candidates.length === 1 ? "" : "s"} listed</span></span>
                 </a>
-              </li>
-            ))}
-          </ul>
+            ),
+          }))} />
         </>
       )}
       {l.gap && (
@@ -144,15 +127,14 @@ export default async function PlaceRoute({ params }: { params: Promise<{ id: str
         <section className="block" aria-labelledby="overlaps-h">
           <h2 id="overlaps-h">{place.type === "zip" ? "Counties and cities this ZIP overlaps" : "ZIP areas that overlap this place"}</h2>
           <p className="src">Share is the portion of the ZIP area's land inside the place, from Census relationship files.</p>
-          <ul className="plain">
-            {p.overlaps.slice(0, 60).map((o) => (
-              <li key={o.place.id}>
+          <FilterableList label="overlapping places" listClassName="plain" items={p.overlaps.map((o) => ({
+            id: o.place.id, text: `${o.place.label} ${o.place.stateName} ${o.place.state}`, content: (
+              <>
                 <a href={placeHref(o.place.id)}>{o.place.label}{o.place.type === "zip" ? "" : `, ${o.place.stateName}`}</a>
                 {o.share !== null && <span className="meta"> · {Math.round(o.share * 100)}% of the ZIP area</span>}
-              </li>
-            ))}
-          </ul>
-          {p.overlaps.length > 60 && <p className="meta">Showing 60 of {p.overlaps.length}.</p>}
+              </>
+            ),
+          }))} />
         </section>
       )}
 
@@ -160,9 +142,9 @@ export default async function PlaceRoute({ params }: { params: Promise<{ id: str
         <section className="block" aria-labelledby="children-h">
           <h2 id="children-h">Counties</h2>
           {p.cityCount ? <p className="src">{p.cityCount} cities and towns: {p.cityNote}</p> : null}
-          <ul className="plain cols">
-            {p.children.map((c) => <li key={c.id}><a href={placeHref(c.id)}>{c.label}</a></li>)}
-          </ul>
+          <FilterableList label="counties" listClassName="plain cols" items={p.children.map((c) => ({
+            id: c.id, text: c.label, content: <a href={placeHref(c.id)}>{c.label}</a>,
+          }))} />
         </section>
       )}
 

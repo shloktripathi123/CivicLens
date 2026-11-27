@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/api";
+import FilterableList from "@/components/FilterableList";
 
 export const metadata = { title: "Elections and voting — Civic Lens" };
 
@@ -36,16 +37,14 @@ function ElectionBlock({ e }: { e: Election }) {
         </ul>
       ) : <p className="na">Registration, mail-in ballot and drop-box dates are not yet published here for this election. Use the official election office link above or <a href="https://www.usa.gov/register-to-vote">USA.gov</a> for your exact deadlines.</p>}
       <h3>Offices on the ballot</h3>
-      <ul className="results">
-        {e.contests.map((c) => (
-          <li key={c.raceId}>
+      <FilterableList label={`${e.jurisdiction} ${e.date} offices`} listClassName="results" pageSize={15} items={e.contests.map((c) => ({
+        id: c.raceId, text: `${c.office} ${c.level}`, content: (
             <a className="card" href={`/races/${encodeURIComponent(c.raceId)}`}>
               <span><span className="name">{c.office}</span><br />
                 <span className="meta">{CONTEST_TEXT[c.label]} · {c.candidates > 0 ? `${c.candidates} candidate${c.candidates === 1 ? "" : "s"}. ` : ""}{c.note}</span></span>
             </a>
-          </li>
-        ))}
-      </ul>
+        ),
+      }))} />
     </section>
   );
 }
@@ -61,6 +60,7 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
       <form className="filters" method="get">
         <label>State (e.g. OR)<input name="state" maxLength={2} defaultValue={state} /></label>
         <button type="submit">Show</button>
+        {state && <a href="/elections">Clear state</a>}
       </form>
       {!cal && <p className="empty" role="alert">{res?.status === 400 || res?.status === 404 ? "Enter a valid 2-letter state or territory code." : "The calendar is unavailable right now."}</p>}
       {cal && (
@@ -82,12 +82,18 @@ export default async function ElectionsPage({ searchParams }: { searchParams: Pr
 
           <h2>Upcoming</h2>
           {cal.upcoming.length === 0 && <p className="empty">No upcoming elections in our data{cal.state ? ` for ${cal.state}` : ""}.</p>}
-          {cal.upcoming.map((e) => <ElectionBlock key={e.id} e={e} />)}
+          <FilterableList label="upcoming elections" listClassName="plain" pageSize={8} items={cal.upcoming.map((e) => ({
+            id: e.id, text: `${e.jurisdiction} ${e.date} ${e.type} ${e.contests.map((c) => c.office).join(" ")}`,
+            content: <ElectionBlock e={e} />,
+          }))} />
 
           {cal.past.length > 0 && (
             <>
               <h2>Past</h2>
-              {cal.past.map((e) => <ElectionBlock key={e.id} e={e} />)}
+              <FilterableList label="past elections" listClassName="plain" pageSize={8} items={cal.past.map((e) => ({
+                id: e.id, text: `${e.jurisdiction} ${e.date} ${e.type} ${e.contests.map((c) => c.office).join(" ")}`,
+                content: <ElectionBlock e={e} />,
+              }))} />
             </>
           )}
           <p className="src">{cal.coverage}</p>

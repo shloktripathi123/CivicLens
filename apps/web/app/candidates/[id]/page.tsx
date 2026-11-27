@@ -54,6 +54,9 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
           <p><a href={`/races/${encodeURIComponent(race.id)}`}>See everyone in this race</a>
             {record.terms.length > 0 && <> · <a href={`/people/${id}`}>Full official record</a></>}</p>
           <p className="src">Data last updated {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString() : "unknown"}</p>
+          <nav aria-label="Candidate sections" className="src">
+            Jump to: <a href="#ov">Overview</a> · <a href="#say">Positions</a> · <a href="#did">Record</a> · <a href="#money">Money</a>
+          </nav>
         </div>
       </div>
 

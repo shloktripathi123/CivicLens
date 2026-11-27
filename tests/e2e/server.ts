@@ -1,4 +1,5 @@
 import { openDb, setExclusionRules } from "@civic/db";
+import { STATES } from "@civic/domain";
 import { buildApp } from "../../apps/api/src/app.ts";
 import { EXCLUSIONS } from "../../apps/api/src/exclusions.ts";
 import { gradeSources } from "../../apps/ingest/src/sources.ts";
@@ -55,6 +56,38 @@ db.exec(`
   INSERT INTO official_record(person_id,section,title,detail,date,publisher,url,source_id,as_of)
     VALUES('22222222-2222-4222-8222-222222222222','bills','HB 1000: Example public records bill','Primary sponsor','2025-01-01','Test records','https://example.test/bill','congress-legislators','2025-01-01');
 `);
+const insertState = db.prepare(`INSERT OR IGNORE INTO place(id,type,name,label,name_norm,state,fips,source_id,as_of)
+  VALUES(?,'state',?,?,?,?,?,'congress-legislators','2025-01-01')`);
+for (const state of STATES) insertState.run(`state:${state.usps}`, state.name, state.name, state.name.toLowerCase(), state.usps, state.fips);
+const insertPlace = db.prepare(`INSERT INTO place(id,type,name,label,name_norm,state,fips,parent_id,approximate,source_id,as_of)
+  VALUES(?,?,?,?,?,'OR',?,?,?,'congress-legislators','2025-01-01')`);
+const insertOverlap = db.prepare(`INSERT INTO place_overlap(place_id,other_id,relation,share,source_id,as_of)
+  VALUES(?,'county:41001','zip-in-county',0.5,'congress-legislators','2025-01-01')`);
+const insertBill = db.prepare(`INSERT INTO bill(id,jurisdiction,session,number,title,status,is_law,url,source_id,as_of)
+  VALUES(?,'CA','2026',?,?,'unknown',0,?,'congress-legislators','2026-01-01')`);
+const insertOffice = db.prepare(`INSERT INTO office(id,level,body,jurisdiction,title,source_id,as_of)
+  VALUES(?,'state','Oregon Senate','OR',?,'congress-legislators','2025-01-01')`);
+const insertRace = db.prepare(`INSERT INTO race(id,election_id,office_id,status,source_id,as_of)
+  VALUES(?,'election',?,'upcoming','congress-legislators','2025-01-01')`);
+const insertRecord = db.prepare(`INSERT INTO official_record(person_id,section,title,date,publisher,url,source_id,as_of)
+  VALUES('22222222-2222-4222-8222-222222222222','bills',?,'2024-01-01','Test records',?,'congress-legislators','2025-01-01')`);
+for (let i = 1; i <= 65; i++) {
+  const number = String(i).padStart(2, "0");
+  const zip = String(97000 + i);
+  insertPlace.run(`zip:${zip}`, "zip", zip, `ZIP ${zip}`, zip, zip, null, 1);
+  insertOverlap.run(`zip:${zip}`);
+  if (i <= 35) {
+    const fips = `41${String(i + 100).padStart(3, "0")}`;
+    const county = `Research County ${number}`;
+    insertPlace.run(`county:${fips}`, "county", county, county, county.toLowerCase(), fips, "state:OR", 0);
+  }
+  if (i <= 32) {
+    insertBill.run(`research-bill-${number}`, `AB ${100 + i}`, `Research bill ${number}`, `https://example.test/bill/${number}`);
+    insertOffice.run(`research-office-${number}`, `Research office ${number}`);
+    insertRace.run(`research-race-${number}`, `research-office-${number}`);
+  }
+  if (i <= 12) insertRecord.run(`Research bill ${number}`, `https://example.test/record/${number}`);
+}
 gradeSources(db);
 setExclusionRules(db, [...EXCLUSIONS]);
 

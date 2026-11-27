@@ -1,4 +1,5 @@
 import Cite from "@/components/Cite";
+import FilterableList from "@/components/FilterableList";
 import type { DeepKey, DeepProfile, DeepSlot, Person } from "@/lib/api";
 
 const TITLES: Record<DeepKey, string> = {
@@ -17,18 +18,18 @@ function Slot({ k, slot, officialUrl }: { k: DeepKey; slot: DeepSlot | undefined
       <summary>{TITLES[k]}<span className="chip">{has ? `${items.length} recorded` : "None recorded"}</span></summary>
       {k === "bills" && <p className="src">Sponsorship does not by itself mean a bill passed or show how this person voted. Records may be incomplete.</p>}
       {has ? (
-        <ul>
-          {items.map((i, n) => (
-            <li key={n}>
+        <FilterableList label={`${TITLES[k].toLowerCase()} records`} listClassName="" pageSize={10} items={items.map((i, n) => ({
+          id: String(n), text: [i.title, i.detail, i.publisher, i.date].filter(Boolean).join(" "), content: (
+            <>
               {i.billId ? <a href={`/bills/${encodeURIComponent(i.billId)}`}>{i.title}</a> : i.url ? <a href={i.url}>{i.title}</a> : i.title}
               {i.billId && i.url && <> · <a href={i.url}>Source record</a></>}
               {i.publisher && <span className="src"> · {i.publisher}</span>}
               {i.date && <span className="src"> · {i.date.slice(0, 10)}</span>}
               {i.detail && <><br /><span className="meta">{i.detail}</span></>}{" "}
               <Cite p={i.provenance} />
-            </li>
-          ))}
-        </ul>
+            </>
+          ),
+        }))} />
       ) : (
         <p className="na">
           No recorded history in our data for {slot?.checked ?? "this record type"}. This is a gap in our sources,
